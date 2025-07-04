@@ -1,0 +1,82 @@
+package com.example.android.chessapp
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.example.android.chessapp.ui.theme.ChessAppTheme
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            ChessAppTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    ChessApp()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ChessApp() {
+    var showBoard by remember { mutableStateOf(false) }
+
+    if (showBoard) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Back button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                Button(
+                    onClick = { showBoard = false }
+                ) {
+                    Text("← Back")
+                }
+            }
+
+            // Chess board
+            ChessBoard(
+                modifier = Modifier.weight(1f)
+            )
+        }
+    } else {
+        // Home screen
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Chess App",
+                    style = MaterialTheme.typography.headlineLarge,
+                    modifier = Modifier.padding(bottom = 32.dp)
+                )
+
+                Button(
+                    onClick = { showBoard = true },
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    Text("Play")
+                }
+            }
+        }
+    }
+}

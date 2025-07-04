@@ -1,0 +1,41 @@
+Step 1: Define the project plan and goals
+Key requirements from you:
+Target Android version: Android 10 (API level 29)
+Device for testing: Galaxy S9 (runs Android 10)
+App purpose: A chess app for beginners and casual players
+Features:
+Play against bots
+Bots should be balanced so players win about half the time
+Intuitive and beginner-friendly UI
+Development approach:
+Add one feature at a time
+Test after each step
+Proposed high-level plan with iterative steps:
+Setup project and basic UI:
+
+Create a new Android Studio project targeting Android 10.
+Show a simple home screen with a "Play" button.
+Run and test this on your Galaxy S9.
+Basic chess board UI without game logic:
+
+Display an empty chess board grid.
+Allow moves to be visually shown (drag & drop or tap).
+Implement chess game logic:
+
+Add chess rules (piece movements, turns).
+Validate legal moves.
+Add a simple AI bot:
+
+Create a very basic bot that makes random or simple moves.
+Allow playing against this bot.
+Improve AI difficulty:
+
+Implement a bot that adjusts its strength to target ~50% win rate against casual players.
+Enhance UI/UX:
+
+Add hints, move suggestions.
+Add beginner-friendly features like explanations.
+Testing & polishing:
+
+Test on your device.
+Fix bugs and improve performance.
