@@ -68,8 +68,4 @@ class ChessAI {
     private fun getValidMoves(position: ChessPosition, board: Array<Array<ChessPiece?>>): List<ChessPosition> {
         return ChessLogic.getValidMoves(position, board)
     }
-
-    private fun isValidPosition(position: ChessPosition): Boolean {
-        return position.row in 0..7 && position.col in 0..7
-    }
 }
