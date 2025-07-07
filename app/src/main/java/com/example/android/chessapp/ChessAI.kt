@@ -69,62 +69,6 @@ class ChessAI {
         return ChessLogic.getValidMoves(position, board)
     }
 
-    private fun getRookMoves(position: ChessPosition, board: Array<Array<ChessPiece?>>, color: PieceColor): List<ChessPosition> {
-        val moves = mutableListOf<ChessPosition>()
-        val directions = listOf(
-            Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0)
-        )
-
-        directions.forEach { (rowDir, colDir) ->
-            var currentRow = position.row + rowDir
-            var currentCol = position.col + colDir
-
-            while (isValidPosition(ChessPosition(currentRow, currentCol))) {
-                val targetPiece = board[currentRow][currentCol]
-                if (targetPiece == null) {
-                    moves.add(ChessPosition(currentRow, currentCol))
-                } else {
-                    if (targetPiece.color != color) {
-                        moves.add(ChessPosition(currentRow, currentCol))
-                    }
-                    break
-                }
-                currentRow += rowDir
-                currentCol += colDir
-            }
-        }
-
-        return moves
-    }
-
-    private fun getBishopMoves(position: ChessPosition, board: Array<Array<ChessPiece?>>, color: PieceColor): List<ChessPosition> {
-        val moves = mutableListOf<ChessPosition>()
-        val directions = listOf(
-            Pair(1, 1), Pair(1, -1), Pair(-1, 1), Pair(-1, -1)
-        )
-
-        directions.forEach { (rowDir, colDir) ->
-            var currentRow = position.row + rowDir
-            var currentCol = position.col + colDir
-
-            while (isValidPosition(ChessPosition(currentRow, currentCol))) {
-                val targetPiece = board[currentRow][currentCol]
-                if (targetPiece == null) {
-                    moves.add(ChessPosition(currentRow, currentCol))
-                } else {
-                    if (targetPiece.color != color) {
-                        moves.add(ChessPosition(currentRow, currentCol))
-                    }
-                    break
-                }
-                currentRow += rowDir
-                currentCol += colDir
-            }
-        }
-
-        return moves
-    }
-
     private fun isValidPosition(position: ChessPosition): Boolean {
         return position.row in 0..7 && position.col in 0..7
     }

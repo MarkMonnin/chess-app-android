@@ -16,7 +16,7 @@
 - [x] Add one feature at a time
 - [x] Test after each step
 
-### DEVELOPMENT CONSTRAINT RULE
+### DEVELOPMENT CONSTRAINT RULES
 🔒 **MINIMAL CODE UPDATE CONSTRAINT** 🔒
 - **Write all of the actual code that would be changed**
 - **But minimally - don't write the whole file**
@@ -24,6 +24,13 @@
 - **For removed code, just describe what needs removed (e.g., function signatures)**
 - **This constraint ensures focused, manageable development steps**
 - **Always specify the exact location and what would be modified**
+
+📝 **COMMIT TRACKING RULE** 📝
+- **Always maintain "Next Commit Comment" section in TODO.md**
+- **Update this section before making any code changes**
+- **Keep commit messages minimal and focused - one line describing each change**
+- **Format: "Step X.Y: Brief description of what was implemented/fixed"**
+- **No detailed explanations - just the essential change made**
 
 ---
 
