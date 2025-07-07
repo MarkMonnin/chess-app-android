@@ -15,6 +15,7 @@ bin/
 gen/
 out/
 release/
+essential_dev_files.txt
 
 # Gradle files
 .gradle/
