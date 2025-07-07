@@ -1,4 +1,101 @@
 ----
+File: ReadMe.md
+----
+# Chess App for Android
+
+A beginner-friendly chess application built for Android using Kotlin and Jetpack Compose.
+
+## Features (Current)
+
+- ✅ Interactive chess board with 8x8 grid
+- ✅ Chess pieces in starting positions
+- ✅ Square selection with visual feedback
+- ✅ Material Design 3 UI
+- ✅ Navigation between home screen and game board
+
+## Features (Planned)
+
+- ⏳ Basic piece movement and turn management
+- ⏳ Chess rule validation (legal moves)
+- ⏳ AI opponent with adjustable difficulty
+- ⏳ Beginner-friendly hints and tutorials
+- ⏳ Move history and game replay
+
+## Technical Details
+
+- **Target Android Version**: Android 10 (API level 29)
+- **Language**: Kotlin
+- **UI Framework**: Jetpack Compose
+- **Architecture**: Modern Android development practices
+
+## Development Setup
+
+1. Clone the repository
+2. Open in Android Studio
+3. Build and run on device or emulator
+
+## Current Progress
+
+This project is being developed iteratively with the following steps:
+
+1. ✅ **Basic Setup**: Project structure and simple UI
+2. ✅ **Chess Board UI**: Interactive board with pieces
+3. ⏳ **Game Logic**: Move validation and turn management
+4. ⏳ **AI Implementation**: Bot opponent
+5. ⏳ **UI/UX Enhancement**: Beginner-friendly features
+
+## Testing
+
+Tested on:
+- Android Studio Emulator (Android 10)
+- Target: Samsung Galaxy S9 (Android 10)
+
+----
+File: TODO.md
+----
+Step 1: Define the project plan and goals
+Key requirements from you:
+Target Android version: Android 10 (API level 29)
+Device for testing: Galaxy S9 (runs Android 10)
+App purpose: A chess app for beginners and casual players
+Features:
+Play against bots
+Bots should be balanced so players win about half the time
+Intuitive and beginner-friendly UI
+Development approach:
+Add one feature at a time
+Test after each step
+Proposed high-level plan with iterative steps:
+Setup project and basic UI:
+
+Create a new Android Studio project targeting Android 10.
+Show a simple home screen with a "Play" button.
+Run and test this on your Galaxy S9.
+Basic chess board UI without game logic:
+
+Display an empty chess board grid.
+Allow moves to be visually shown (drag & drop or tap).
+Implement chess game logic:
+
+Add chess rules (piece movements, turns).
+Validate legal moves.
+Add a simple AI bot:
+
+Create a very basic bot that makes random or simple moves.
+Allow playing against this bot.
+Improve AI difficulty:
+
+Implement a bot that adjusts its strength to target ~50% win rate against casual players.
+Enhance UI/UX:
+
+Add hints, move suggestions.
+Add beginner-friendly features like explanations.
+Testing & polishing:
+
+Test on your device.
+Fix bugs and improve performance.
+
+----
 File: app\src\main\AndroidManifest.xml
 ----
 <?xml version="1.0" encoding="utf-8"?>
@@ -30,36 +127,202 @@ File: app\src\main\AndroidManifest.xml
 </manifest>
 
 ----
+File: app\src\main\java\com\example\android\chessapp\ChessBoard.kt
+----
+package com.example.android.chessapp
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+data class ChessPosition(val row: Int, val col: Int)
+
+enum class PieceType {
+    KING, QUEEN, ROOK, BISHOP, KNIGHT, PAWN
+}
+
+enum class PieceColor {
+    WHITE, BLACK
+}
+
+data class ChessPiece(
+    val type: PieceType,
+    val color: PieceColor
+)
+
+@Composable
+fun ChessBoard(
+    modifier: Modifier = Modifier
+) {
+    // Initialize board with starting positions
+    var board by remember { mutableStateOf(initializeBoard()) }
+    var selectedPosition by remember { mutableStateOf<ChessPosition?>(null) }
+
+    Column(
+        modifier = modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Chess board
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(8),
+            modifier = Modifier
+                .aspectRatio(1f)
+                .padding(16.dp)
+        ) {
+            itemsIndexed(board.flatten()) { index, piece ->
+                val row = index / 8
+                val col = index % 8
+                val position = ChessPosition(row, col)
+                val isSelected = selectedPosition == position
+
+                ChessSquare(
+                    piece = piece,
+                    isLight = (row + col) % 2 == 0,
+                    isSelected = isSelected,
+                    onClick = {
+                        selectedPosition = if (isSelected) null else position
+                    }
+                )
+            }
+        }
+
+        // Show selected position info
+        selectedPosition?.let { pos ->
+            val piece = board[pos.row][pos.col]
+            Text(
+                text = "Selected: ${('a' + pos.col)}${8 - pos.row}" +
+                        if (piece != null) " - ${piece.color} ${piece.type}" else " - Empty",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun ChessSquare(
+    piece: ChessPiece?,
+    isLight: Boolean,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val backgroundColor = when {
+        isSelected -> Color(0xFF4CAF50) // Green for selected
+        isLight -> Color(0xFFF0D9B5) // Light squares
+        else -> Color(0xFFB58863) // Dark squares
+    }
+
+    Box(
+        modifier = Modifier
+            .aspectRatio(1f)
+            .background(backgroundColor)
+            .border(
+                width = if (isSelected) 2.dp else 0.dp,
+                color = Color.Black
+            )
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        piece?.let {
+            Text(
+                text = getPieceSymbol(it),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                color = if (it.color == PieceColor.WHITE) Color.White else Color.Black
+            )
+        }
+    }
+}
+
+private fun getPieceSymbol(piece: ChessPiece): String {
+    return when (piece.type) {
+        PieceType.KING -> if (piece.color == PieceColor.WHITE) "♔" else "♚"
+        PieceType.QUEEN -> if (piece.color == PieceColor.WHITE) "♕" else "♛"
+        PieceType.ROOK -> if (piece.color == PieceColor.WHITE) "♖" else "♜"
+        PieceType.BISHOP -> if (piece.color == PieceColor.WHITE) "♗" else "♝"
+        PieceType.KNIGHT -> if (piece.color == PieceColor.WHITE) "♘" else "♞"
+        PieceType.PAWN -> if (piece.color == PieceColor.WHITE) "♙" else "♟"
+    }
+}
+
+private fun initializeBoard(): Array<Array<ChessPiece?>> {
+    val board = Array(8) { Array<ChessPiece?>(8) { null } }
+
+    // Place black pieces (top of board)
+    board[0][0] = ChessPiece(PieceType.ROOK, PieceColor.BLACK)
+    board[0][1] = ChessPiece(PieceType.KNIGHT, PieceColor.BLACK)
+    board[0][2] = ChessPiece(PieceType.BISHOP, PieceColor.BLACK)
+    board[0][3] = ChessPiece(PieceType.QUEEN, PieceColor.BLACK)
+    board[0][4] = ChessPiece(PieceType.KING, PieceColor.BLACK)
+    board[0][5] = ChessPiece(PieceType.BISHOP, PieceColor.BLACK)
+    board[0][6] = ChessPiece(PieceType.KNIGHT, PieceColor.BLACK)
+    board[0][7] = ChessPiece(PieceType.ROOK, PieceColor.BLACK)
+
+    // Place black pawns
+    for (col in 0..7) {
+        board[1][col] = ChessPiece(PieceType.PAWN, PieceColor.BLACK)
+    }
+
+    // Place white pawns
+    for (col in 0..7) {
+        board[6][col] = ChessPiece(PieceType.PAWN, PieceColor.WHITE)
+    }
+
+    // Place white pieces (bottom of board)
+    board[7][0] = ChessPiece(PieceType.ROOK, PieceColor.WHITE)
+    board[7][1] = ChessPiece(PieceType.KNIGHT, PieceColor.WHITE)
+    board[7][2] = ChessPiece(PieceType.BISHOP, PieceColor.WHITE)
+    board[7][3] = ChessPiece(PieceType.QUEEN, PieceColor.WHITE)
+    board[7][4] = ChessPiece(PieceType.KING, PieceColor.WHITE)
+    board[7][5] = ChessPiece(PieceType.BISHOP, PieceColor.WHITE)
+    board[7][6] = ChessPiece(PieceType.KNIGHT, PieceColor.WHITE)
+    board[7][7] = ChessPiece(PieceType.ROOK, PieceColor.WHITE)
+
+    return board
+}
+
+----
 File: app\src\main\java\com\example\android\chessapp\MainActivity.kt
 ----
 package com.example.android.chessapp
 
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
+import com.example.android.chessapp.ui.theme.ChessAppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            ChessAppTheme { // We'll define this shortly
+            ChessAppTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    PlayButton(onClick = {
-                        Toast.makeText(this, "Play button clicked!", Toast.LENGTH_SHORT).show()
-                    })
+                    ChessApp()
                 }
             }
         }
@@ -67,48 +330,73 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun PlayButton(onClick: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Button(onClick = onClick) {
-            Text(text = "Play")
+fun ChessApp() {
+    var showBoard by remember { mutableStateOf(false) }
+
+    if (showBoard) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Back button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                Button(
+                    onClick = { showBoard = false }
+                ) {
+                    Text("← Back")
+                }
+            }
+
+            // Chess board
+            ChessBoard(
+                modifier = Modifier.weight(1f)
+            )
+        }
+    } else {
+        // Home screen
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Chess App",
+                    style = MaterialTheme.typography.headlineLarge,
+                    modifier = Modifier.padding(bottom = 32.dp)
+                )
+
+                Button(
+                    onClick = { showBoard = true },
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    Text("Play")
+                }
+            }
         }
     }
 }
 
 ----
-File: app\src\main\java\com\example\android\chessapp\Theme.kt
+File: app\src\main\java\com\example\android\chessapp\ui\theme\Color.kt
 ----
-package com.example.android.chessapp
+package com.example.android.chessapp.ui.theme
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
-private val LightColors = lightColorScheme(
-    // Customize your light color scheme here if needed
-)
+val Purple80 = Color(0xFFD0BCFF)
+val PurpleGrey80 = Color(0xFFCCC2DC)
+val Pink80 = Color(0xFFEFB8C8)
 
-private val DarkColors = darkColorScheme(
-    // Customize your dark color scheme here if needed
-)
-
-@Composable
-fun ChessAppTheme(
-    darkTheme: Boolean = false,
-    content: @Composable () -> Unit
-) {
-    val colors = if (darkTheme) DarkColors else LightColors
-
-    MaterialTheme(
-        colorScheme = colors,
-        typography = androidx.compose.material3.Typography(),
-        content = content
-    )
-}
+val Purple40 = Color(0xFF6650a4)
+val PurpleGrey40 = Color(0xFF625b71)
+val Pink40 = Color(0xFF7D5260)
 
 ----
 File: app\src\main\java\com\example\android\chessapp\ui\theme\Theme.kt
@@ -171,6 +459,44 @@ fun ChessAppTheme(
         content = content
     )
 }
+
+----
+File: app\src\main\java\com\example\android\chessapp\ui\theme\Type.kt
+----
+package com.example.android.chessapp.ui.theme
+
+import androidx.compose.material3.Typography
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+
+// Set of Material typography styles to start with
+val Typography = Typography(
+    bodyLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        letterSpacing = 0.5.sp
+    )
+    /* Other default text styles to override
+    titleLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Normal,
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        letterSpacing = 0.sp
+    ),
+    labelSmall = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Medium,
+        fontSize = 11.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.5.sp
+    )
+    */
+)
 
 ----
 File: app\src\main\res\values\strings.xml

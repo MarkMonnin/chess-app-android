@@ -6,7 +6,7 @@ echo Exporting ESSENTIAL development files to %OUTPUT%...
 echo.
 
 :: Only the most critical extensions
-set EXTENSIONS=kt java xml gradle
+set EXTENSIONS=kt java xml gradle md
 
 :: Directories to ignore
 set IGNORE_DIRS=.git .idea build .gradle node_modules
@@ -21,7 +21,7 @@ set IGNORE_PATHS=drawable mipmap androidTest test wrapper
 set IGNORE_PATTERNS=ic_launcher
 
 :: Essential files to always include (even if they match ignore patterns)
-set ESSENTIAL_FILES=MainActivity.kt AndroidManifest.xml build.gradle settings.gradle Theme.kt strings.xml Color.kt Type.kt ChessBoard.kt
+set ESSENTIAL_FILES=MainActivity.kt AndroidManifest.xml build.gradle settings.gradle Theme.kt strings.xml Color.kt Type.kt ChessBoard.kt ReadMe.md TODO.md
 
 set fileCount=0
 set scannedCount=0
