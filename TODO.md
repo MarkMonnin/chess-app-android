@@ -7,7 +7,7 @@
 
 ### Core Features
 - [x] Play against bots
-- [ ] Bots should be adjustable 
+- [ ] Bots should be adjustable
   - [ ] Players can choose any difficulty Level 0.0-50.0
   - [ ] Game over suggests next difficulty
 - [x] Intuitive and beginner-friendly UI
@@ -15,6 +15,15 @@
 ### Development Approach
 - [x] Add one feature at a time
 - [x] Test after each step
+
+### DEVELOPMENT CONSTRAINT RULE
+🔒 **MINIMAL CODE UPDATE CONSTRAINT** 🔒
+- **Write all of the actual code that would be changed**
+- **But minimally - don't write the whole file**
+- **Show only the specific parts being added or modified**
+- **For removed code, just describe what needs removed (e.g., function signatures)**
+- **This constraint ensures focused, manageable development steps**
+- **Always specify the exact location and what would be modified**
 
 ---
 
@@ -48,19 +57,45 @@
 - [x] Implement game state management and turn tracking
 - [x] Add move history display
 - [x] Test piece movement and rule validation
+### Step 4: Add a simple AI bot ✅ (mostly complete)
+- [x] Create basic bot that makes random legal moves
+- [x] Allow playing against this bot
+- [x] Add game mode selection (Human vs Human / Human vs AI)
+- [x] Implement AI thinking delay for realism
+- [x] Add AI status display ("AI is thinking...")
+- [ ] **BUG FIX**: Fix game status text - currently shows wrong player after moves
+- [ ] **FEATURE**: Highlight AI's last move (from and to squares) for better visibility
+- [ ] **REFACTOR**: Move duplicate chess logic to shared utility class
+- [ ] **TESTING**: Test AI bot gameplay extensively
+- [ ] **POLISH**: Add game mode selection UI on home screen ✅
 
-### Step 4: Add a simple AI bot 🔄
-- [ ] Create basic bot that makes random legal moves
-- [ ] Allow playing against this bot
-- [ ] Add game state management (ongoing, checkmate, stalemate)
-- [ ] Test bot gameplay
+#### Step 4 Remaining Tasks:
+1. **Bug Fixes** (HIGH PRIORITY)
+- Fix game status text logic (currently backwards)
+- ✅ **COMPLETED**: Add move highlighting (show from/to squares of last move for all players)
 
-### Step 5: Improve AI difficulty 🔄
+2. **Code Refactoring** (HIGH PRIORITY)
+- Create `ChessLogic.kt` or `ChessUtils.kt` to eliminate duplicate code
+- Move `getValidMoves()`, `getRookMoves()`, `getBishopMoves()`, `isValidPosition()` to shared file
+- Update both `ChessAI.kt` and `ChessBoard.kt` to use shared logic
+
+3. **UI Improvements**
+- Add game mode selection on home screen ✅
+- Improve AI status messages
+- Add restart game functionality
+
+4. **Testing & Bug Fixes**
+- Test AI moves thoroughly
+- Ensure AI cannot move human pieces
+- Test edge cases (no valid moves, etc.)
+
+### Step 5: Improve AI difficulty 🔄 (next major step)
+- [ ] **REFACTOR FIRST**: Complete Step 4 refactoring before starting
 - [ ] Implement adaptive difficulty system (Level 0.0-50.0)
 - [ ] Create difficulty slider/picker in settings
 - [ ] Implement move evaluation algorithm that can be tuned
 - [ ] Add post-game difficulty suggestions based on performance
-- [ ] Add bot "thinking" time for realism
+- [ ] Add bot "thinking" time variation based on difficulty
 - [ ] Test and balance difficulty across full range
 
 ### Step 6: Add advanced chess rules 🔄
@@ -93,31 +128,78 @@
 ---
 
 ## Current Status
-**Last Updated**: Step 3 completed successfully  
-**Next Priority**: Step 4 - Add simple AI bot opponent  
-**Testing Status**: ✅ Complete chess gameplay implemented and working
+**Last Updated**: Step 4 mostly completed - AI bot implemented but needs refactoring  
+**Next Priority**: Complete Step 4 refactoring, then move to Step 5 (difficulty system)  
+**Testing Status**: ✅ Basic AI functionality working, needs thorough testing
 
 ## Major Accomplishments
-### Step 3 - Complete Chess Gameplay ✅
-- ✅ Full piece movement logic implemented for all 6 piece types
-- ✅ Turn-based gameplay with proper alternating turns
-- ✅ Visual feedback system (green highlighting, valid move dots)
-- ✅ Move validation preventing illegal moves
-- ✅ Interactive tap-to-select, tap-to-move system
-- ✅ Game status display and move history
-- ✅ Proper chess notation (algebraic notation)
+### Step 4 - AI Bot Implementation ✅ (mostly complete)
+- ✅ Basic AI that makes random legal moves
+- ✅ Human vs AI game mode implemented
+- ✅ AI thinking delay and status messages
+- ✅ Proper turn management preventing human moves during AI turn
+- ✅ Game mode enum and logic separation
+- ✅ **NEW**: Last move highlighting for all players (improved UX)
+
+## Critical Issues to Address (Step 4 Completion)
+### 1. Code Duplication (HIGH PRIORITY)
+- `getValidMoves()` logic is duplicated in `ChessAI.kt` and `ChessBoard.kt`
+- `getRookMoves()`, `getBishopMoves()`, `isValidPosition()` are duplicated
+- This creates maintenance burden and potential for bugs
+- **SOLUTION**: Create shared `ChessLogic.kt` utility class
+
+### 2. Missing UI Features
+- No game mode selection on home screen
+- No way to restart game
+- Limited game status information
+
+### 3. Testing Gaps
+- AI move validation needs thorough testing
+- Edge cases not fully tested
+- Performance testing needed
+
+## Code Structure Improvements Needed
+```
+Current Structure:
+- ChessBoard.kt (contains UI + some game logic)
+- ChessAI.kt (contains AI + duplicated game logic)
+- ChessModels.kt (missing - needs to be created)
+
+Proposed Structure:
+- ChessBoard.kt (UI only)
+- ChessAI.kt (AI logic only)
+- ChessLogic.kt (shared game logic)
+- ChessModels.kt (data classes)
+```
+
+## Next Immediate Steps
+1. **Create `ChessLogic.kt`** - Move shared logic here
+2. **Create `ChessModels.kt`** - Move data classes here
+3. **Update home screen** - Add game mode selection
+4. **Add restart functionality**
+5. **Test thoroughly** - Ensure AI works correctly
+6. **Then proceed to Step 5** - Difficulty system
 
 ## Notes
-- **Fully playable chess game** - All basic chess rules implemented
-- Two-player gameplay working perfectly
-- Ready for AI bot implementation
-- All piece types move according to official chess rules
-- Game state properly tracked with move history
-- Clean, intuitive UI with excellent visual feedback
+- **AI bot is functional** but code needs cleanup
+- **Human vs AI gameplay working** - AI makes random moves
+- **Foundation is solid** for adding difficulty system
+- **Major refactoring needed** before proceeding to Step 5
+- Current AI makes purely random moves (Level 0.0 equivalent)
 
-## Known Limitations (to address in future steps)
-- No check/checkmate detection yet
-- No AI opponent (human vs human only)
-- Missing advanced rules (castling, en passant, pawn promotion)
-- No game save/load functionality
-- No difficulty settings or hints system
+## Testing Checklist for Step 4 Completion
+- [ ] AI makes only legal moves
+- [ ] AI cannot move during human turn
+- [ ] Human cannot move during AI turn
+- [ ] Game alternates turns correctly
+- [ ] AI thinking delay works
+- [ ] All piece types move correctly for AI
+- [ ] No crashes or exceptions
+- [ ] Memory usage acceptable
+- [ ] Performance smooth on target device
+
+## Version History
+- **v0.4** - AI bot implementation (Step 4 - mostly complete)
+- **v0.3** - Complete chess gameplay mechanics (Step 3)
+- **v0.2** - Interactive chess board UI (Step 2)
+- **v0.1** - Basic project setup and navigation (Step 1)

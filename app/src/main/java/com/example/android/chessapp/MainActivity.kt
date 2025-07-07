@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun ChessApp() {
     var showBoard by remember { mutableStateOf(false) }
+    var gameMode by remember { mutableStateOf(GameMode.HUMAN_VS_AI) }
 
     if (showBoard) {
         Column(
@@ -49,13 +50,14 @@ fun ChessApp() {
                 }
             }
 
-            // Chess board
+            // Chess board with selected game mode
             ChessBoard(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                gameMode = gameMode
             )
         }
     } else {
-        // Home screen
+        // Home screen with game mode selection
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -70,11 +72,25 @@ fun ChessApp() {
                     modifier = Modifier.padding(bottom = 32.dp)
                 )
 
+                // Game mode buttons
                 Button(
-                    onClick = { showBoard = true },
+                    onClick = {
+                        gameMode = GameMode.HUMAN_VS_HUMAN
+                        showBoard = true
+                    },
                     modifier = Modifier.padding(8.dp)
                 ) {
-                    Text("Play")
+                    Text("Play vs Human")
+                }
+
+                Button(
+                    onClick = {
+                        gameMode = GameMode.HUMAN_VS_AI
+                        showBoard = true
+                    },
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    Text("Play vs AI")
                 }
             }
         }
