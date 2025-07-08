@@ -7,8 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,45 +29,44 @@ fun ChessBoard(
     gameMode: GameMode = GameMode.HUMAN_VS_AI
 ) {
     // Game state
-    var board by remember { mutableStateOf(initializeBoard()) }
-    var currentPlayer by remember { mutableStateOf(PieceColor.WHITE) }
+    var gameState by remember { mutableStateOf(ChessGameState(initializeBoard())) }
     var selectedPosition by remember { mutableStateOf<ChessPosition?>(null) }
     var validMoves by remember { mutableStateOf<List<ChessPosition>>(emptyList()) }
-    var moveHistory by remember { mutableStateOf<List<ChessMove>>(emptyList()) }
-    var gameStatus by remember { mutableStateOf("White to move") }
-    var isAiThinking by remember { mutableStateOf(false) }
-    var lastMove by remember { mutableStateOf<ChessMove?>(null) }
-
-    // AI instance
-    val chessAI = remember { ChessAI() }
+    var isAITurn by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    val chessAI = remember { ChessAI() }
+
+    // Update game status text based on current state
+    val gameStatus = when {
+        gameState.isCheckmate -> "Checkmate! ${gameState.currentPlayer.opposite().toString().replaceFirstChar { it.uppercase() }} wins!"
+        gameState.isStalemate -> "Stalemate! Game is a draw."
+        gameState.isCheck -> "${gameState.currentPlayer.toString().replaceFirstChar { it.uppercase() }} is in check!"
+        else -> "${gameState.currentPlayer.toString().replaceFirstChar { it.uppercase() }}'s turn"
+    }
 
     // AI move handler
     val handleAiMove = { move: ChessMove ->
-        val newBoard = board.map { it.clone() }.toTypedArray()
+        val newBoard = gameState.board.map { it.clone() }.toTypedArray()
         newBoard[move.to.row][move.to.col] = move.piece
         newBoard[move.from.row][move.from.col] = null
 
-        board = newBoard
-        moveHistory = moveHistory + move
-        currentPlayer = if (currentPlayer == PieceColor.WHITE) PieceColor.BLACK else PieceColor.WHITE
+        val newState = ChessGameState(newBoard, gameState.currentPlayer.opposite())
+        gameState = newState
         selectedPosition = null
         validMoves = emptyList()
-        isAiThinking = false
-        gameStatus = "${if (currentPlayer == PieceColor.WHITE) "White" else "Black"} to move"
-        lastMove = move
     }
 
     // Trigger AI move when it's AI's turn
-    LaunchedEffect(currentPlayer, gameMode) {
+    LaunchedEffect(gameState.currentPlayer, gameMode) {
         if (gameMode == GameMode.HUMAN_VS_AI &&
-            currentPlayer == PieceColor.BLACK &&
-            !isAiThinking) {
-            isAiThinking = true
-            gameStatus = "AI is thinking..."
-
+            gameState.currentPlayer == PieceColor.BLACK &&
+            !isAITurn) {
+            isAITurn = true
             coroutineScope.launch {
-                chessAI.makeMove(board, PieceColor.BLACK, handleAiMove)
+                chessAI.makeMove(gameState.board, gameState.currentPlayer) { aiMove ->
+                    handleAiMove(aiMove)
+                    isAITurn = false
+                }
             }
         }
     }
@@ -88,12 +86,45 @@ fun ChessBoard(
             modifier = Modifier.padding(8.dp)
         )
 
-        // Game status
-        Text(
-            text = gameStatus,
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(16.dp)
-        )
+        // Game status and controls
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = gameStatus,
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = {
+                        gameState = ChessGameState(initializeBoard())
+                        selectedPosition = null
+                        validMoves = emptyList()
+                        isAITurn = false
+                    },
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Text("New Game")
+                }
+
+                // Add a button to show game state for debugging
+                if (gameState.isCheck) {
+                    Text(
+                        text = "CHECK!",
+                        color = Color.Red,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 16.dp)
+                    )
+                }
+            }
+        }
 
         // Chess board
         LazyVerticalGrid(
@@ -102,7 +133,7 @@ fun ChessBoard(
                 .aspectRatio(1f)
                 .padding(16.dp)
         ) {
-            itemsIndexed(board.flatten()) { index, piece ->
+            itemsIndexed(gameState.board.flatten()) { index, piece ->
                 val row = index / 8
                 val col = index % 8
                 val position = ChessPosition(row, col)
@@ -115,64 +146,101 @@ fun ChessBoard(
                     isLight = (row + col) % 2 == 0,
                     isSelected = isSelected,
                     isValidMove = isValidMove,
-                    lastMove = lastMove,
+                    lastMove = null,
                     onClick = {
-                        // Only allow human moves when it's not AI's turn or AI is not thinking
-                        if (gameMode == GameMode.HUMAN_VS_HUMAN ||
-                            (gameMode == GameMode.HUMAN_VS_AI && currentPlayer == PieceColor.WHITE && !isAiThinking)) {
-                            handleSquareClick(
-                                position = position,
-                                board = board,
-                                selectedPosition = selectedPosition,
-                                currentPlayer = currentPlayer,
-                                validMoves = validMoves,
-                                onMove = { newBoard, move ->
-                                    board = newBoard
-                                    moveHistory = moveHistory + move
-                                    currentPlayer = if (currentPlayer == PieceColor.WHITE) PieceColor.BLACK else PieceColor.WHITE
-                                    selectedPosition = null
-                                    validMoves = emptyList()
-                                    gameStatus = "${if (currentPlayer == PieceColor.WHITE) "White" else "Black"} to move"
-                                    lastMove = move
-                                },
-                                onSelection = { pos, moves ->
-                                    selectedPosition = pos
-                                    validMoves = moves
+                        if (isAITurn || gameState.isCheckmate || gameState.isStalemate) return@ChessSquare
+
+                        val clickedPiece = gameState.board[position.row][position.col]
+
+                        // If no piece is selected, select the piece if it's the current player's piece
+                        if (selectedPosition == null) {
+                            if (clickedPiece?.color == gameState.currentPlayer) {
+                                selectedPosition = position
+                                validMoves = gameState.getValidMoves(position, gameState.board)
+                            }
+                        }
+                        // If a piece is already selected
+                        else {
+                            // If clicking on the same piece, deselect it
+                            if (position == selectedPosition) {
+                                selectedPosition = null
+                                validMoves = emptyList()
+                            }
+                            // If clicking on a valid move, make the move
+                            else if (validMoves.contains(position)) {
+                                val from = selectedPosition!!
+                                val pieceToMove = gameState.board[from.row][from.col]!!
+                                val capturedPiece = gameState.board[position.row][position.col]
+                                val move = ChessMove(from, position, pieceToMove, capturedPiece)
+
+                                // Apply the move to the game state
+                                val newState = gameState.applyMove(move)
+
+                                // Update the game state
+                                gameState = newState
+                                selectedPosition = null
+                                validMoves = emptyList()
+
+                                // If it's AI's turn and we're in AI mode, make AI move
+                                if (gameMode == GameMode.HUMAN_VS_AI && newState.currentPlayer == PieceColor.BLACK) {
+                                    isAITurn = true
+                                    coroutineScope.launch {
+                                        chessAI.makeMove(newState.board, newState.currentPlayer) { aiMove ->
+                                            handleAiMove(aiMove)
+                                            isAITurn = false
+                                        }
+                                    }
                                 }
-                            )
+                            }
+                            // If clicking on another piece of the same color, select that piece
+                            else if (piece?.color == gameState.currentPlayer) {
+                                selectedPosition = position
+                                validMoves = gameState.getValidMoves(position, gameState.board)
+                            }
+                            // If clicking on an invalid square, deselect the piece
+                            else {
+                                selectedPosition = null
+                                validMoves = emptyList()
+                            }
                         }
                     }
                 )
             }
         }
 
-        // Selected position and move info
-        selectedPosition?.let { pos ->
-            val piece = board[pos.row][pos.col]
-            Text(
-                text = "Selected: ${ChessLogic.positionToAlgebraic(pos)}" +
-                        if (piece != null) " - ${piece.color} ${piece.type}" else " - Empty",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(8.dp)
-            )
-        }
+        // Game info section
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Selected piece info
+            selectedPosition?.let { pos ->
+                val piece = gameState.board[pos.row][pos.col]
+                Text(
+                    text = "Selected: ${ChessLogic.positionToAlgebraic(pos)}" +
+                            if (piece != null) " - ${piece.color} ${piece.type}" else " - Empty",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(4.dp)
+                )
+            }
 
-        // Last move info
-        moveHistory.lastOrNull()?.let { lastMove ->
+            // Last move info
+            gameState.lastMove?.let { lastMove ->
+                Text(
+                    text = "Last move: ${lastMove.piece.color} ${lastMove.piece.type} " +
+                            "${ChessLogic.positionToAlgebraic(lastMove.from)} → ${ChessLogic.positionToAlgebraic(lastMove.to)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(4.dp)
+                )
+            }
+
+            // Move count
             Text(
-                text = "Last move: ${lastMove.piece.color} ${lastMove.piece.type} " +
-                        "${ChessLogic.positionToAlgebraic(lastMove.from)} → ${ChessLogic.positionToAlgebraic(lastMove.to)}",
+                text = "Move ${(gameState.fullMoveNumber)}",
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(8.dp)
+                modifier = Modifier.padding(4.dp)
             )
         }
-
-        // Move count
-        Text(
-            text = "Move ${moveHistory.size + 1}",
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(4.dp)
-        )
     }
 }
 
@@ -229,44 +297,6 @@ fun ChessSquare(
         }
     }
 }
-
-private fun handleSquareClick(
-    position: ChessPosition,
-    board: Array<Array<ChessPiece?>>,
-    selectedPosition: ChessPosition?,
-    currentPlayer: PieceColor,
-    validMoves: List<ChessPosition>,
-    onMove: (Array<Array<ChessPiece?>>, ChessMove) -> Unit,
-    onSelection: (ChessPosition?, List<ChessPosition>) -> Unit
-) {
-    if (selectedPosition != null && validMoves.contains(position)) {
-        // Execute move
-        val piece = board[selectedPosition.row][selectedPosition.col]!!
-        val capturedPiece = board[position.row][position.col]
-
-        val newBoard = board.map { it.clone() }.toTypedArray()
-        newBoard[position.row][position.col] = piece
-        newBoard[selectedPosition.row][selectedPosition.col] = null
-
-        val move = ChessMove(selectedPosition, position, piece, capturedPiece)
-        onMove(newBoard, move)
-    } else {
-        // Select piece
-        val piece = board[position.row][position.col]
-        if (piece != null && piece.color == currentPlayer) {
-            val moves = getValidMoves(position, board)
-            onSelection(position, moves)
-        } else {
-            onSelection(null, emptyList())
-        }
-    }
-}
-
-private fun getValidMoves(position: ChessPosition, board: Array<Array<ChessPiece?>>): List<ChessPosition> {
-    return ChessLogic.getValidMoves(position, board)
-}
-
-
 
 private fun initializeBoard(): Array<Array<ChessPiece?>> {
     val board = Array(8) { Array<ChessPiece?>(8) { null } }

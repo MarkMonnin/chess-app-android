@@ -1,6 +1,10 @@
 package com.example.android.chessapp
 
 object ChessLogic {
+    /**
+     * Gets all pseudo-legal moves for a piece at the given position
+     * These moves don't account for check/checkmate conditions
+     */
     fun getValidMoves(position: ChessPosition, board: Array<Array<ChessPiece?>>): List<ChessPosition> {
         val piece = board[position.row][position.col] ?: return emptyList()
         val moves = mutableListOf<ChessPosition>()
@@ -72,6 +76,7 @@ object ChessLogic {
             }
 
             PieceType.KING -> {
+                // Regular king moves
                 for (rowOffset in -1..1) {
                     for (colOffset in -1..1) {
                         if (rowOffset == 0 && colOffset == 0) continue
@@ -90,10 +95,16 @@ object ChessLogic {
         return moves
     }
 
+    /**
+     * Gets all pseudo-legal rook moves from the given position
+     */
     private fun getRookMoves(position: ChessPosition, board: Array<Array<ChessPiece?>>, color: PieceColor): List<ChessPosition> {
         val moves = mutableListOf<ChessPosition>()
         val directions = listOf(
-            Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0)
+            Pair(0, 1),   // Right
+            Pair(0, -1),  // Left
+            Pair(1, 0),   // Down
+            Pair(-1, 0)   // Up
         )
 
         directions.forEach { (rowDir, colDir) ->
@@ -118,10 +129,16 @@ object ChessLogic {
         return moves
     }
 
+    /**
+     * Gets all pseudo-legal bishop moves from the given position
+     */
     private fun getBishopMoves(position: ChessPosition, board: Array<Array<ChessPiece?>>, color: PieceColor): List<ChessPosition> {
         val moves = mutableListOf<ChessPosition>()
         val directions = listOf(
-            Pair(1, 1), Pair(1, -1), Pair(-1, 1), Pair(-1, -1)
+            Pair(1, 1),   // Down-right
+            Pair(1, -1),  // Down-left
+            Pair(-1, 1),  // Up-right
+            Pair(-1, -1)  // Up-left
         )
 
         directions.forEach { (rowDir, colDir) ->
@@ -146,14 +163,23 @@ object ChessLogic {
         return moves
     }
 
+    /**
+     * Checks if the given position is within the bounds of the chess board
+     */
     private fun isValidPosition(position: ChessPosition): Boolean {
         return position.row in 0..7 && position.col in 0..7
     }
 
+    /**
+     * Converts a board position to algebraic notation (e.g., a1, h8)
+     */
     fun positionToAlgebraic(position: ChessPosition): String {
         return "${('a' + position.col)}${8 - position.row}"
     }
 
+    /**
+     * Gets the Unicode symbol for a chess piece
+     */
     fun getPieceSymbol(piece: ChessPiece): String {
         return when (piece.type) {
             PieceType.KING -> if (piece.color == PieceColor.WHITE) "♔" else "♚"

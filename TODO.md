@@ -9,19 +9,28 @@
 - [x] Basic chess gameplay
 - [x] Human vs Human mode
 - [x] Basic AI opponent
-- [ ] Adjustable AI difficulty (0.0-50.0)
 - [ ] Advanced chess rules (check, castling, etc.)
+- [ ] Adjustable AI difficulty (0.0-50.0)
 
 ## Next Steps (Step 5 - Advanced Chess Rules)
 
 ### Core Rules Implementation
-- [ ] Check detection
-- [ ] Prevent moves that leave king in check
-- [ ] Checkmate detection
-- [ ] Stalemate detection
+- [x] Check detection
+- [x] Prevent moves that leave king in check
+- [x] Checkmate detection
+- [x] Stalemate detection
 - [ ] Castling (kingside and queenside)
+  - [ ] Update castling rights after rook/king moves
+  - [ ] Add UI feedback for castling availability
 - [ ] En passant capture
+  - [ ] Track en passant target square
+  - [ ] Implement en passant move validation
 - [ ] Pawn promotion
+  - [ ] Add promotion UI
+  - [ ] Handle promotion in game logic
+- [ ] Move counters
+  - [ ] Implement halfmove clock (50-move rule)
+  - [ ] Update fullmove counter
 
 ### Testing
 - [ ] Test all special moves

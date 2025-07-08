@@ -4,68 +4,52 @@ import kotlinx.coroutines.delay
 import kotlin.random.Random
 
 /**
- * Simple AI bot that makes random legal moves
- * This is the foundation for the difficulty system that will be added in Step 5
+ * Chess AI that makes legal moves based on the current game state
+ * Currently implements random move selection as a foundation for future difficulty levels
  */
 class ChessAI {
 
     /**
      * Makes a move for the AI bot
-     * Currently uses random move selection
      * @param board Current board state
      * @param color AI's color (BLACK or WHITE)
-     * @param onMove Callback when move is selected
+     * @param onMove Callback when move is selected with the chosen move
      */
     suspend fun makeMove(
         board: Array<Array<ChessPiece?>>,
         color: PieceColor,
         onMove: (ChessMove) -> Unit
     ) {
-        // Add thinking delay for realistic feel
-        delay(Random.nextLong(500, 1500))
+        // Add thinking delay for realistic feel (shorter delay for easier difficulty)
+        delay(Random.nextLong(300, 1000))
 
-        val allPossibleMoves = getAllPossibleMoves(board, color)
+        // Create a temporary game state for move validation
+        val tempState = ChessGameState(board, color)
+        val allPossibleMoves = mutableListOf<ChessMove>()
 
-        if (allPossibleMoves.isNotEmpty()) {
-            val randomMove = allPossibleMoves.random()
-            onMove(randomMove)
-        }
-    }
-
-    /**
-     * Gets all possible moves for the given color
-     */
-    private fun getAllPossibleMoves(
-        board: Array<Array<ChessPiece?>>,
-        color: PieceColor
-    ): List<ChessMove> {
-        val moves = mutableListOf<ChessMove>()
-
-        // Find all pieces of the given color
+        // Find all pieces of the AI's color and collect their valid moves
         for (row in 0..7) {
             for (col in 0..7) {
                 val piece = board[row][col]
-                if (piece?.color == color) {
+                if (piece != null && piece.color == color) {
                     val position = ChessPosition(row, col)
-                    val validMoves = getValidMoves(position, board)
-
-                    // Convert positions to moves
+                    val validMoves = tempState.getValidMoves(position, board)
+                    
+                    // Create move objects for each valid move
                     validMoves.forEach { targetPos ->
                         val capturedPiece = board[targetPos.row][targetPos.col]
-                        moves.add(ChessMove(position, targetPos, piece, capturedPiece))
+                        allPossibleMoves.add(ChessMove(position, targetPos, piece, capturedPiece))
                     }
                 }
             }
         }
 
-        return moves
-    }
-
-    /**
-     * Gets valid moves for a piece at the given position
-     * This uses the same logic as the human player
-     */
-    private fun getValidMoves(position: ChessPosition, board: Array<Array<ChessPiece?>>): List<ChessPosition> {
-        return ChessLogic.getValidMoves(position, board)
+        // If we have valid moves, pick one at random
+        if (allPossibleMoves.isNotEmpty()) {
+            // For now, just pick a random move
+            // In the future, this is where we'll implement smarter move selection based on difficulty
+            val selectedMove = allPossibleMoves.random()
+            onMove(selectedMove)
+        }
     }
 }
