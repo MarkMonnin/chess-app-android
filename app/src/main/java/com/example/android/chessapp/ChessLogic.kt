@@ -1,7 +1,7 @@
 package com.example.android.chessapp
 
 object ChessLogic {
-    public fun getValidMoves(position: ChessPosition, board: Array<Array<ChessPiece?>>): List<ChessPosition> {
+    fun getValidMoves(position: ChessPosition, board: Array<Array<ChessPiece?>>): List<ChessPosition> {
         val piece = board[position.row][position.col] ?: return emptyList()
         val moves = mutableListOf<ChessPosition>()
 
@@ -148,5 +148,20 @@ object ChessLogic {
 
     private fun isValidPosition(position: ChessPosition): Boolean {
         return position.row in 0..7 && position.col in 0..7
+    }
+
+    fun positionToAlgebraic(position: ChessPosition): String {
+        return "${('a' + position.col)}${8 - position.row}"
+    }
+
+    fun getPieceSymbol(piece: ChessPiece): String {
+        return when (piece.type) {
+            PieceType.KING -> if (piece.color == PieceColor.WHITE) "♔" else "♚"
+            PieceType.QUEEN -> if (piece.color == PieceColor.WHITE) "♕" else "♛"
+            PieceType.ROOK -> if (piece.color == PieceColor.WHITE) "♖" else "♜"
+            PieceType.BISHOP -> if (piece.color == PieceColor.WHITE) "♗" else "♝"
+            PieceType.KNIGHT -> if (piece.color == PieceColor.WHITE) "♘" else "♞"
+            PieceType.PAWN -> if (piece.color == PieceColor.WHITE) "♙" else "♟"
+        }
     }
 }

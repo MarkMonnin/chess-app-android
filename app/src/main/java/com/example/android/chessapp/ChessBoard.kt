@@ -150,7 +150,7 @@ fun ChessBoard(
         selectedPosition?.let { pos ->
             val piece = board[pos.row][pos.col]
             Text(
-                text = "Selected: ${positionToAlgebraic(pos)}" +
+                text = "Selected: ${ChessLogic.positionToAlgebraic(pos)}" +
                         if (piece != null) " - ${piece.color} ${piece.type}" else " - Empty",
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(8.dp)
@@ -161,7 +161,7 @@ fun ChessBoard(
         moveHistory.lastOrNull()?.let { lastMove ->
             Text(
                 text = "Last move: ${lastMove.piece.color} ${lastMove.piece.type} " +
-                        "${positionToAlgebraic(lastMove.from)} → ${positionToAlgebraic(lastMove.to)}",
+                        "${ChessLogic.positionToAlgebraic(lastMove.from)} → ${ChessLogic.positionToAlgebraic(lastMove.to)}",
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(8.dp)
             )
@@ -211,7 +211,7 @@ fun ChessSquare(
     ) {
         piece?.let {
             Text(
-                text = getPieceSymbol(it),
+                text = ChessLogic.getPieceSymbol(it),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -266,20 +266,7 @@ private fun getValidMoves(position: ChessPosition, board: Array<Array<ChessPiece
     return ChessLogic.getValidMoves(position, board)
 }
 
-private fun positionToAlgebraic(position: ChessPosition): String {
-    return "${('a' + position.col)}${8 - position.row}"
-}
 
-private fun getPieceSymbol(piece: ChessPiece): String {
-    return when (piece.type) {
-        PieceType.KING -> if (piece.color == PieceColor.WHITE) "♔" else "♚"
-        PieceType.QUEEN -> if (piece.color == PieceColor.WHITE) "♕" else "♛"
-        PieceType.ROOK -> if (piece.color == PieceColor.WHITE) "♖" else "♜"
-        PieceType.BISHOP -> if (piece.color == PieceColor.WHITE) "♗" else "♝"
-        PieceType.KNIGHT -> if (piece.color == PieceColor.WHITE) "♘" else "♞"
-        PieceType.PAWN -> if (piece.color == PieceColor.WHITE) "♙" else "♟"
-    }
-}
 
 private fun initializeBoard(): Array<Array<ChessPiece?>> {
     val board = Array(8) { Array<ChessPiece?>(8) { null } }
