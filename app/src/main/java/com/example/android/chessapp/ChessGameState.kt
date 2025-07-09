@@ -77,11 +77,26 @@ data class ChessGameState(
         val newBoard = board.map { it.clone() }.toTypedArray()
         val piece = newBoard[move.from.row][move.from.col]!!
         
+        // Handle castling
+        if (piece.type == PieceType.KING && kotlin.math.abs(move.from.col - move.to.col) == 2) {
+            // This is a castling move
+            val row = move.from.row
+            if (move.to.col == 6) {
+                // Kingside castling - move the rook
+                newBoard[row][5] = newBoard[row][7]?.copy()
+                newBoard[row][7] = null
+            } else {
+                // Queenside castling - move the rook
+                newBoard[row][3] = newBoard[row][0]?.copy()
+                newBoard[row][0] = null
+            }
+        }
+        
         // Apply the move
         newBoard[move.from.row][move.from.col] = null
         newBoard[move.to.row][move.to.col] = piece
         
-        // Create new game state with all updates
+        // Update king positions if needed
         val updatedWhiteKingPos = if (piece.type == PieceType.KING && piece.color == PieceColor.WHITE) {
             move.to
         } else {
@@ -94,11 +109,40 @@ data class ChessGameState(
             blackKingPosition
         }
         
+        // Update castling rights
+        val newWhiteCanCastleKingside = when {
+            piece.type == PieceType.KING && piece.color == PieceColor.WHITE -> false
+            piece.type == PieceType.ROOK && move.from == ChessPosition(7, 7) -> false
+            else -> whiteCanCastleKingside
+        }
+        
+        val newWhiteCanCastleQueenside = when {
+            piece.type == PieceType.KING && piece.color == PieceColor.WHITE -> false
+            piece.type == PieceType.ROOK && move.from == ChessPosition(7, 0) -> false
+            else -> whiteCanCastleQueenside
+        }
+        
+        val newBlackCanCastleKingside = when {
+            piece.type == PieceType.KING && piece.color == PieceColor.BLACK -> false
+            piece.type == PieceType.ROOK && move.from == ChessPosition(0, 7) -> false
+            else -> blackCanCastleKingside
+        }
+        
+        val newBlackCanCastleQueenside = when {
+            piece.type == PieceType.KING && piece.color == PieceColor.BLACK -> false
+            piece.type == PieceType.ROOK && move.from == ChessPosition(0, 0) -> false
+            else -> blackCanCastleQueenside
+        }
+        
         val newState = copy(
             board = newBoard,
             currentPlayer = currentPlayer.opposite(),
             whiteKingPosition = updatedWhiteKingPos,
             blackKingPosition = updatedBlackKingPos,
+            whiteCanCastleKingside = newWhiteCanCastleKingside,
+            whiteCanCastleQueenside = newWhiteCanCastleQueenside,
+            blackCanCastleKingside = newBlackCanCastleKingside,
+            blackCanCastleQueenside = newBlackCanCastleQueenside,
             lastMove = move,
             isCheck = false,
             isCheckmate = false,
@@ -133,7 +177,7 @@ data class ChessGameState(
                 val piece = board[row][col]
                 if (piece != null && piece.color == opponentColor) {
                     // Get pseudo-legal moves (without check validation to avoid infinite recursion)
-                    val moves = ChessLogic.getValidMoves(ChessPosition(row, col), board)
+                    val moves = ChessLogic.getValidMoves(ChessPosition(row, col), board, this)
                     if (moves.any { it == kingPosition }) {
                         return true
                     }
@@ -154,7 +198,7 @@ data class ChessGameState(
         val piece = board[position.row][position.col] ?: return emptyList()
         
         // Get all pseudo-legal moves (basic movement rules)
-        var moves = ChessLogic.getValidMoves(position, board)
+        var moves = ChessLogic.getValidMoves(position, board, this)
         
         if (checkForCheck) {
             // Filter out moves that would leave the king in check

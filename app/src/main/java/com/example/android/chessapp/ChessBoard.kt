@@ -240,6 +240,21 @@ fun ChessBoard(
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(4.dp)
             )
+            
+            // Castling availability
+            val castlingRights = buildString {
+                if (gameState.whiteCanCastleKingside) append("O-O ")
+                if (gameState.whiteCanCastleQueenside) append("O-O-O ")
+                if (gameState.blackCanCastleKingside) append("o-o ")
+                if (gameState.blackCanCastleQueenside) append("o-o-o")
+                if (isEmpty()) append("No castling available")
+            }
+            
+            Text(
+                text = "Castling: $castlingRights",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(4.dp)
+            )
         }
     }
 }
