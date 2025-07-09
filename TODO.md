@@ -1,26 +1,32 @@
 # Chess App Development
 
-## Current Status (2025-07-08)
+## Current Status (2025-07-09)
 - **Current Step**: 5 - Advanced Chess Rules
-- **Last Completed**: Step 4 - AI Bot Implementation
-- **Next Focus**: Implement core chess rules (check, castling, en passant, pawn promotion)
+- **Last Completed**: Castling implementation
+- **Next Focus**: Implement en passant and pawn promotion
 
 ## Core Features
 - [x] Basic chess gameplay
 - [x] Human vs Human mode
 - [x] Basic AI opponent
-- [ ] Advanced chess rules (check, castling, etc.)
+- [x] Advanced chess rules (partial)
+  - [x] Check/mate detection
+  - [x] Stalemate detection
+  - [x] Castling (both sides)
+  - [ ] En passant
+  - [ ] Pawn promotion
 - [ ] Adjustable AI difficulty (0.0-50.0)
 
-## Next Steps (Step 5 - Advanced Chess Rules)
+## Next Steps
 
 ### Core Rules Implementation
 - [x] Check detection
 - [x] Prevent moves that leave king in check
 - [x] Checkmate detection
 - [x] Stalemate detection
-- [ ] Castling (kingside and queenside)
-  - [ ] Update castling rights after rook/king moves
+- [x] Castling (kingside and queenside)
+  - [x] Basic implementation
+  - [x] King/rook move tracking
   - [ ] Add UI feedback for castling availability
 - [ ] En passant capture
   - [ ] Track en passant target square
