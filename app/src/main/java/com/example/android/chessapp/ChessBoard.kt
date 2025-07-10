@@ -16,7 +16,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 
 enum class GameMode {
     HUMAN_VS_HUMAN,
@@ -34,7 +40,7 @@ fun ChessBoard(
     var validMoves by remember { mutableStateOf<List<ChessPosition>>(emptyList()) }
     var isAITurn by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-    val chessAI = remember { ChessAI() }
+    val chessAI = remember { OptimizedChessAI() }
 
     // Update game status text based on current state
     val gameStatus = when {
@@ -46,11 +52,8 @@ fun ChessBoard(
 
     // AI move handler
     val handleAiMove = { move: ChessMove ->
-        val newBoard = gameState.board.map { it.clone() }.toTypedArray()
-        newBoard[move.to.row][move.to.col] = move.piece
-        newBoard[move.from.row][move.from.col] = null
-
-        val newState = ChessGameState(newBoard, gameState.currentPlayer.opposite())
+        // Apply the move to the current game state
+        val newState = gameState.applyMove(move)
         gameState = newState
         selectedPosition = null
         validMoves = emptyList()
@@ -62,8 +65,12 @@ fun ChessBoard(
             gameState.currentPlayer == PieceColor.BLACK &&
             !isAITurn) {
             isAITurn = true
-            coroutineScope.launch {
-                chessAI.makeMove(gameState.board, gameState.currentPlayer) { aiMove ->
+            coroutineScope.launch(Dispatchers.Default) {
+                chessAI.makeMove(
+                    board = gameState.board,
+                    color = gameState.currentPlayer,
+                    gameState = gameState
+                ) { aiMove ->
                     handleAiMove(aiMove)
                     isAITurn = false
                 }
@@ -93,11 +100,51 @@ fun ChessBoard(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = gameStatus,
-                style = MaterialTheme.typography.headlineSmall,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(bottom = 16.dp)
-            )
+            ) {
+                // Undo button
+                IconButton(
+                    onClick = {
+                        gameState.undoMove()?.let { newState ->
+                            gameState = newState
+                            selectedPosition = null
+                            validMoves = emptyList()
+                        }
+                    },
+                    enabled = gameState.canUndo() && !isAITurn
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Undo last move"
+                    )
+                }
+                
+                // Game status text
+                Text(
+                    text = gameStatus,
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                
+                // Redo button
+                IconButton(
+                    onClick = {
+                        gameState.redoMove()?.let { newState ->
+                            gameState = newState
+                            selectedPosition = null
+                            validMoves = emptyList()
+                        }
+                    },
+                    enabled = gameState.canRedo() && !isAITurn
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Redo last move"
+                    )
+                }
+            }
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -156,7 +203,7 @@ fun ChessBoard(
                         if (selectedPosition == null) {
                             if (clickedPiece?.color == gameState.currentPlayer) {
                                 selectedPosition = position
-                                validMoves = gameState.getValidMoves(position, gameState.board)
+                                validMoves = gameState.getValidMovesOptimized(position, gameState.board)
                             }
                         }
                         // If a piece is already selected
@@ -167,7 +214,7 @@ fun ChessBoard(
                                 validMoves = emptyList()
                             }
                             // If clicking on a valid move, make the move
-                            else if (validMoves.contains(position)) {
+                            else if (validMoves.any { it.row == position.row && it.col == position.col }) {
                                 val from = selectedPosition!!
                                 val pieceToMove = gameState.board[from.row][from.col]!!
                                 val capturedPiece = gameState.board[position.row][position.col]
@@ -184,8 +231,12 @@ fun ChessBoard(
                                 // If it's AI's turn and we're in AI mode, make AI move
                                 if (gameMode == GameMode.HUMAN_VS_AI && newState.currentPlayer == PieceColor.BLACK) {
                                     isAITurn = true
-                                    coroutineScope.launch {
-                                        chessAI.makeMove(newState.board, newState.currentPlayer) { aiMove ->
+                                    coroutineScope.launch(Dispatchers.Default) {
+                                        chessAI.makeMove(
+                                            board = newState.board,
+                                            color = newState.currentPlayer,
+                                            gameState = newState
+                                        ) { aiMove ->
                                             handleAiMove(aiMove)
                                             isAITurn = false
                                         }
@@ -195,7 +246,7 @@ fun ChessBoard(
                             // If clicking on another piece of the same color, select that piece
                             else if (piece?.color == gameState.currentPlayer) {
                                 selectedPosition = position
-                                validMoves = gameState.getValidMoves(position, gameState.board)
+                                validMoves = gameState.getValidMovesOptimized(position, gameState.board)
                             }
                             // If clicking on an invalid square, deselect the piece
                             else {

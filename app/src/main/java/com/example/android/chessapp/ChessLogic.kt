@@ -9,19 +9,22 @@ object ChessLogic {
     }
 
     /**
-     * Gets all pseudo-legal moves for a piece at the given position
+     * Gets all pseudo-legal moves for a piece at the given position with optional check validation
      * @param position The position of the piece
      * @param board The current board state
-     * @param gameState The current game state (optional, needed for castling)
+     * @param gameState The current game state (required for check validation)
+     * @param validateChecks Whether to validate that moves don't leave the king in check
      * @return List of valid target positions
      */
     fun getValidMoves(
         position: ChessPosition, 
         board: Array<Array<ChessPiece?>>, 
-        gameState: ChessGameState? = null
+        gameState: ChessGameState? = null,
+        validateChecks: Boolean = true
     ): List<ChessPosition> {
         val piece = board[position.row][position.col] ?: return emptyList()
         val moves = mutableListOf<ChessPosition>()
+        val validator = IncrementalMoveValidator()
 
         when (piece.type) {
             PieceType.PAWN -> {
@@ -124,28 +127,35 @@ object ChessLogic {
                     }
                 }
                 
-                // Add castling moves if allowed
-                if (piece.color == PieceColor.WHITE) {
-                    // White kingside castling
-                    if (gameState?.whiteCanCastleKingside == true && 
+                // Add castling moves if this is the king and we have game state
+                if (gameState != null) {
+                    // Kingside castling
+                    if ((piece.color == PieceColor.WHITE && gameState.whiteCanCastleKingside || 
+                         piece.color == PieceColor.BLACK && gameState.blackCanCastleKingside) &&
                         canCastleKingside(position, board, piece.color, gameState)) {
-                        moves.add(ChessPosition(position.row, position.col + 2))
+                        val kingSidePos = ChessPosition(position.row, position.col + 2)
+                        if (!validateChecks || validator.isMoveLegal(
+                                ChessMove(position, kingSidePos, piece, null),
+                                board,
+                                gameState
+                            )
+                        ) {
+                            moves.add(kingSidePos)
+                        }
                     }
-                    // White queenside castling
-                    if (gameState?.whiteCanCastleQueenside == true && 
+                    // Queenside castling
+                    if ((piece.color == PieceColor.WHITE && gameState.whiteCanCastleQueenside || 
+                         piece.color == PieceColor.BLACK && gameState.blackCanCastleQueenside) &&
                         canCastleQueenside(position, board, piece.color, gameState)) {
-                        moves.add(ChessPosition(position.row, position.col - 2))
-                    }
-                } else {
-                    // Black kingside castling
-                    if (gameState?.blackCanCastleKingside == true && 
-                        canCastleKingside(position, board, piece.color, gameState)) {
-                        moves.add(ChessPosition(position.row, position.col + 2))
-                    }
-                    // Black queenside castling
-                    if (gameState?.blackCanCastleQueenside == true && 
-                        canCastleQueenside(position, board, piece.color, gameState)) {
-                        moves.add(ChessPosition(position.row, position.col - 2))
+                        val queenSidePos = ChessPosition(position.row, position.col - 2)
+                        if (!validateChecks || validator.isMoveLegal(
+                                ChessMove(position, queenSidePos, piece, null),
+                                board,
+                                gameState
+                            )
+                        ) {
+                            moves.add(queenSidePos)
+                        }
                     }
                 }
             }

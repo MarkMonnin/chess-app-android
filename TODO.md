@@ -43,6 +43,39 @@
 - [ ] Validate endgame conditions
 - [ ] Ensure move validation respects all rules
 
+### Error Handling & Validation
+- [ ] Add comprehensive error handling
+  - [ ] Implement try-catch blocks for move validation
+  - [ ] Add descriptive error messages for invalid moves
+  - [ ] Handle edge cases in game state transitions
+  - [ ] Validate board state consistency
+  - [ ] Add input validation for user interactions
+
+### Game History & Analysis
+- [ ] Implement move history system
+  - [ ] Store full game history in ChessGameState
+  - [ ] Add move list with standard algebraic notation
+  - [ ] Support PGN (Portable Game Notation) export/import
+- [ ] Add undo/redo functionality
+  - [ ] Track game states for undo/redo operations
+  - [ ] Add UI controls for undo/redo
+  - [ ] Handle special moves (castling, en passant) in history
+- [ ] Game analysis features
+  - [ ] Display move evaluation scores
+  - [ ] Show captured pieces
+  - [ ] Add game result tracking (win/loss/draw)
+
+### Code Organization & Architecture
+- [ ] Improve separation of concerns
+  - [ ] Extract move validation logic from ChessBoard.kt to a dedicated MoveValidator class
+  - [ ] Create GameController to manage game flow and state transitions
+  - [ ] Separate UI logic from game logic in ChessBoard.kt
+  - [ ] Define clear interfaces between components
+- [ ] Refactor ChessBoard.kt
+  - [ ] Move non-UI logic to appropriate domain classes
+  - [ ] Create dedicated view models for UI state
+  - [ ] Improve state management
+
 ## Future Steps
 
 ### Step 6: AI Difficulty System
