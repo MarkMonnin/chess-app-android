@@ -505,9 +505,6 @@ fun ChessBoard(
                             if (showMoveList) {
                                 MoveList(
                                     moveHistory = gameState.moveHistory,
-                                    onMoveSelected = { _ ->
-                                        // TODO: Implement move navigation
-                                    },
                                     modifier = Modifier.fillMaxSize()
                                 )
                             } else {
