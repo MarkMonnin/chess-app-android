@@ -17,8 +17,8 @@ object ChessLogic {
      * @return List of valid target positions
      */
     fun getValidMoves(
-        position: ChessPosition, 
-        board: Array<Array<ChessPiece?>>, 
+        position: ChessPosition,
+        board: Array<Array<ChessPiece?>>,
         gameState: ChessGameState? = null,
         validateChecks: Boolean = true
     ): List<ChessPosition> {
@@ -30,14 +30,15 @@ object ChessLogic {
             PieceType.PAWN -> {
                 val direction = if (piece.color == PieceColor.WHITE) -1 else 1
                 val startRow = if (piece.color == PieceColor.WHITE) 6 else 1
+                val promotionRank = if (piece.color == PieceColor.WHITE) 0 else 7
 
                 // Move forward
                 val oneStep = ChessPosition(position.row + direction, position.col)
                 if (isValidPosition(oneStep) && board[oneStep.row][oneStep.col] == null) {
                     moves.add(oneStep)
 
-                    // Two steps from starting position
-                    if (position.row == startRow) {
+                    // Two steps from starting position (only if not promoting)
+                    if (position.row == startRow && oneStep.row != promotionRank) {
                         val twoSteps = ChessPosition(position.row + 2 * direction, position.col)
                         if (isValidPosition(twoSteps) && board[twoSteps.row][twoSteps.col] == null) {
                             moves.add(twoSteps)
@@ -51,6 +52,17 @@ object ChessLogic {
                     if (isValidPosition(capturePos)) {
                         val targetPiece = board[capturePos.row][capturePos.col]
                         if (targetPiece != null && targetPiece.color != piece.color) {
+                            moves.add(capturePos)
+                        }
+                    }
+                }
+
+                // En passant capture
+                if (gameState != null && gameState.enPassantTarget != null) {
+                    val enPassantTarget = gameState.enPassantTarget!!
+                    listOf(-1, 1).forEach { colOffset ->
+                        val capturePos = ChessPosition(position.row + direction, position.col + colOffset)
+                        if (capturePos.row == enPassantTarget.row && capturePos.col == enPassantTarget.col) {
                             moves.add(capturePos)
                         }
                     }
@@ -118,7 +130,7 @@ object ChessLogic {
                                     }
                                     if (isAdjacentToOpponentKing) break
                                 }
-                                
+
                                 if (!isAdjacentToOpponentKing) {
                                     moves.add(kingMove)
                                 }
@@ -126,12 +138,12 @@ object ChessLogic {
                         }
                     }
                 }
-                
+
                 // Add castling moves if this is the king and we have game state
                 if (gameState != null) {
                     // Kingside castling
-                    if ((piece.color == PieceColor.WHITE && gameState.whiteCanCastleKingside || 
-                         piece.color == PieceColor.BLACK && gameState.blackCanCastleKingside) &&
+                    if ((piece.color == PieceColor.WHITE && gameState.whiteCanCastleKingside ||
+                                piece.color == PieceColor.BLACK && gameState.blackCanCastleKingside) &&
                         canCastleKingside(position, board, piece.color, gameState)) {
                         val kingSidePos = ChessPosition(position.row, position.col + 2)
                         if (!validateChecks || validator.isMoveLegal(
@@ -144,8 +156,8 @@ object ChessLogic {
                         }
                     }
                     // Queenside castling
-                    if ((piece.color == PieceColor.WHITE && gameState.whiteCanCastleQueenside || 
-                         piece.color == PieceColor.BLACK && gameState.blackCanCastleQueenside) &&
+                    if ((piece.color == PieceColor.WHITE && gameState.whiteCanCastleQueenside ||
+                                piece.color == PieceColor.BLACK && gameState.blackCanCastleQueenside) &&
                         canCastleQueenside(position, board, piece.color, gameState)) {
                         val queenSidePos = ChessPosition(position.row, position.col - 2)
                         if (!validateChecks || validator.isMoveLegal(
@@ -162,6 +174,123 @@ object ChessLogic {
         }
 
         return moves
+    }
+
+    /**
+     * Gets all possible moves for a piece, including promotion moves for pawns
+     * This returns ChessMove objects instead of just positions to handle promotion
+     */
+    fun getPossibleMoves(
+        position: ChessPosition,
+        board: Array<Array<ChessPiece?>>,
+        gameState: ChessGameState? = null,
+        validateChecks: Boolean = true
+    ): List<ChessMove> {
+        val piece = board[position.row][position.col] ?: return emptyList()
+        val moves = mutableListOf<ChessMove>()
+        val validator = IncrementalMoveValidator()
+
+        // For non-pawn pieces, convert positions to moves
+        if (piece.type != PieceType.PAWN) {
+            val positions = getValidMoves(position, board, gameState, validateChecks)
+            positions.forEach { targetPos ->
+                val capturedPiece = board[targetPos.row][targetPos.col]
+                moves.add(ChessMove(position, targetPos, piece, capturedPiece))
+            }
+            return moves
+        }
+
+        // Special handling for pawns to include promotion moves
+        val direction = if (piece.color == PieceColor.WHITE) -1 else 1
+        val startRow = if (piece.color == PieceColor.WHITE) 6 else 1
+        val promotionRank = if (piece.color == PieceColor.WHITE) 0 else 7
+
+        // Move forward
+        val oneStep = ChessPosition(position.row + direction, position.col)
+        if (isValidPosition(oneStep) && board[oneStep.row][oneStep.col] == null) {
+            if (oneStep.row == promotionRank) {
+                // Promotion moves - create one move for each possible promotion piece
+                val promotionPieces = listOf(PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT)
+                promotionPieces.forEach { promotionType ->
+                    val move = ChessMove(position, oneStep, piece, null, promotionType)
+                    if (!validateChecks || validator.isMoveLegal(move, board, gameState!!)) {
+                        moves.add(move)
+                    }
+                }
+            } else {
+                // Regular pawn move
+                val move = ChessMove(position, oneStep, piece, null)
+                if (!validateChecks || validator.isMoveLegal(move, board, gameState!!)) {
+                    moves.add(move)
+                }
+
+                // Two steps from starting position
+                if (position.row == startRow) {
+                    val twoSteps = ChessPosition(position.row + 2 * direction, position.col)
+                    if (isValidPosition(twoSteps) && board[twoSteps.row][twoSteps.col] == null) {
+                        val doubleMove = ChessMove(position, twoSteps, piece, null)
+                        if (!validateChecks || validator.isMoveLegal(doubleMove, board, gameState!!)) {
+                            moves.add(doubleMove)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Capture diagonally
+        listOf(-1, 1).forEach { colOffset ->
+            val capturePos = ChessPosition(position.row + direction, position.col + colOffset)
+            if (isValidPosition(capturePos)) {
+                val targetPiece = board[capturePos.row][capturePos.col]
+                if (targetPiece != null && targetPiece.color != piece.color) {
+                    if (capturePos.row == promotionRank) {
+                        // Promotion capture - create one move for each possible promotion piece
+                        val promotionPieces = listOf(PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT)
+                        promotionPieces.forEach { promotionType ->
+                            val move = ChessMove(position, capturePos, piece, targetPiece, promotionType)
+                            if (!validateChecks || validator.isMoveLegal(move, board, gameState!!)) {
+                                moves.add(move)
+                            }
+                        }
+                    } else {
+                        // Regular capture
+                        val move = ChessMove(position, capturePos, piece, targetPiece)
+                        if (!validateChecks || validator.isMoveLegal(move, board, gameState!!)) {
+                            moves.add(move)
+                        }
+                    }
+                }
+            }
+        }
+
+        // En passant capture
+        if (gameState != null && gameState.enPassantTarget != null) {
+            val enPassantTarget = gameState.enPassantTarget!!
+            listOf(-1, 1).forEach { colOffset ->
+                val capturePos = ChessPosition(position.row + direction, position.col + colOffset)
+                if (capturePos.row == enPassantTarget.row && capturePos.col == enPassantTarget.col) {
+                    // The captured pawn is at the en passant target's original position
+                    val capturedPawnPos = ChessPosition(enPassantTarget.row - direction, enPassantTarget.col)
+                    val capturedPawn = board[capturedPawnPos.row][capturedPawnPos.col]
+                    val move = ChessMove(position, capturePos, piece, capturedPawn)
+                    if (!validateChecks || validator.isMoveLegal(move, board, gameState)) {
+                        moves.add(move)
+                    }
+                }
+            }
+        }
+
+        return moves
+    }
+
+    /**
+     * Checks if a pawn move results in promotion
+     */
+    fun isPawnPromotion(move: ChessMove, piece: ChessPiece): Boolean {
+        if (piece.type != PieceType.PAWN) return false
+
+        val promotionRank = if (piece.color == PieceColor.WHITE) 0 else 7
+        return move.to.row == promotionRank
     }
 
     /**
@@ -232,26 +361,25 @@ object ChessLogic {
         return moves
     }
 
-
     /**
      * Checks if a square is under attack by the opponent
      */
-    private fun isSquareUnderAttack(
-        position: ChessPosition, 
-        board: Array<Array<ChessPiece?>>, 
-        gameState: ChessGameState, 
+    fun isSquareUnderAttack(
+        position: ChessPosition,
+        board: Array<Array<ChessPiece?>>,
+        gameState: ChessGameState,
         defenderColor: PieceColor
     ): Boolean {
         val attackerColor = if (defenderColor == PieceColor.WHITE) PieceColor.BLACK else PieceColor.WHITE
-        
+
         // Check all opponent's pieces to see if they can attack the square
         for (row in 0..7) {
             for (col in 0..7) {
                 val piece = board[row][col]
                 if (piece != null && piece.color == attackerColor) {
-                    // Get all squares this piece attacks
-                    val moves = getValidMoves(ChessPosition(row, col), board, gameState)
-                    
+                    // Get all squares this piece attacks (don't validate checks to avoid infinite recursion)
+                    val moves = getValidMoves(ChessPosition(row, col), board, gameState, false)
+
                     // If any move targets the position, it's under attack
                     if (moves.any { it.row == position.row && it.col == position.col }) {
                         return true
@@ -261,92 +389,91 @@ object ChessLogic {
         }
         return false
     }
-    
-    
+
     /**
      * Checks if kingside castling is possible
      */
     private fun canCastleKingside(
-        kingPosition: ChessPosition, 
-        board: Array<Array<ChessPiece?>>, 
+        kingPosition: ChessPosition,
+        board: Array<Array<ChessPiece?>>,
         color: PieceColor,
         gameState: ChessGameState
     ): Boolean {
         val row = kingPosition.row
-        
+
         // 1. Check if squares between king and rook are empty
         if (board[row][5] != null || board[row][6] != null) {
             return false
         }
-        
+
         // 2. Check if rook is in the correct position
         val rook = board[row][7]
         if (rook?.type != PieceType.ROOK || rook.color != color) {
             return false
         }
-        
+
         // 3. Check if king is in check
         if (isSquareUnderAttack(kingPosition, board, gameState, color)) {
             return false
         }
-        
+
         // 4. Check if king would move through or into check
         val kingPath = listOf(
             ChessPosition(row, 5),  // Square the king moves through
             ChessPosition(row, 6)   // Square the king moves to
         )
-        
+
         for (square in kingPath) {
             if (isSquareUnderAttack(square, board, gameState, color)) {
                 return false
             }
         }
-        
+
         return true
     }
-    
+
     /**
      * Checks if queenside castling is possible
      */
     private fun canCastleQueenside(
-        kingPosition: ChessPosition, 
-        board: Array<Array<ChessPiece?>>, 
+        kingPosition: ChessPosition,
+        board: Array<Array<ChessPiece?>>,
         color: PieceColor,
         gameState: ChessGameState
     ): Boolean {
         val row = kingPosition.row
-        
+
         // 1. Check if squares between king and rook are empty
         if (board[row][1] != null || board[row][2] != null || board[row][3] != null) {
             return false
         }
-        
+
         // 2. Check if rook is in the correct position
         val rook = board[row][0]
         if (rook?.type != PieceType.ROOK || rook.color != color) {
             return false
         }
-        
+
         // 3. Check if king is in check
         if (isSquareUnderAttack(kingPosition, board, gameState, color)) {
             return false
         }
-        
+
         // 4. Check if king would move through or into check
         val kingPath = listOf(
             ChessPosition(row, 3),  // Square the king moves through
             ChessPosition(row, 2)   // Square the king moves to
         )
-        
+
         for (square in kingPath) {
             if (isSquareUnderAttack(square, board, gameState, color)) {
                 return false
             }
         }
-        
+
         return true
     }
-    
+
     /**
      * Gets the Unicode symbol for a chess piece
      */
@@ -360,7 +487,7 @@ object ChessLogic {
             PieceType.PAWN -> if (piece.color == PieceColor.WHITE) "♙" else "♟"
         }
     }
-    
+
     /**
      * Converts a ChessPosition to algebraic notation (e.g., "e4", "a1")
      * @param position The position to convert

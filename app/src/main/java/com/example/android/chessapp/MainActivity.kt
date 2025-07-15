@@ -31,6 +31,7 @@ class MainActivity : ComponentActivity() {
 fun ChessApp() {
     var showBoard by remember { mutableStateOf(false) }
     var gameMode by remember { mutableStateOf(GameMode.HUMAN_VS_AI) }
+    var gameResetKey by remember { mutableStateOf(0) }
 
     if (showBoard) {
         Column(
@@ -48,12 +49,19 @@ fun ChessApp() {
                 ) {
                     Text("← Back")
                 }
+                Spacer(modifier = Modifier.width(8.dp)) // Add some space between buttons
+                Button(
+                    onClick = { gameResetKey++ }
+                ) {
+                    Text("New Game")
+                }
             }
 
             // Chess board with selected game mode
             ChessBoard(
                 modifier = Modifier.weight(1f),
-                gameMode = gameMode
+                gameMode = gameMode,
+                resetKey = gameResetKey
             )
         }
     } else {

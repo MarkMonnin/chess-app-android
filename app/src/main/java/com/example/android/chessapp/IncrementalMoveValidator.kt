@@ -24,9 +24,14 @@ class IncrementalMoveValidator {
     ): MoveResult {
         val originalPiece = board[move.to.row][move.to.col]
         val movingPiece = board[move.from.row][move.from.col]!!
-        
+
         // Apply the move
-        board[move.to.row][move.to.col] = movingPiece
+        val pieceToPlace = if (move.promotionPiece != null) {
+            ChessPiece(move.promotionPiece!!, movingPiece.color)
+        } else {
+            movingPiece
+        }
+        board[move.to.row][move.to.col] = pieceToPlace
         board[move.from.row][move.from.col] = null
         
         // Handle castling rook movement
@@ -52,15 +57,20 @@ class IncrementalMoveValidator {
     /**
      * Undoes a move using the MoveResult information
      */
-private fun undoMove(
+    private fun undoMove(
         board: Array<Array<ChessPiece?>>,
         move: ChessMove,
         moveResult: MoveResult
     ) {
         val movingPiece = board[move.to.row][move.to.col]!!
-        
-        // Undo the basic move
-        board[move.from.row][move.from.col] = movingPiece
+
+        // Undo the basic move - restore original pawn if this was a promotion
+        val originalMovingPiece = if (move.promotionPiece != null) {
+            ChessPiece(PieceType.PAWN, movingPiece.color)
+        } else {
+            movingPiece
+        }
+        board[move.from.row][move.from.col] = originalMovingPiece
         board[move.to.row][move.to.col] = moveResult.originalPiece
         
         // Undo castling rook movement

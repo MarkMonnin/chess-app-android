@@ -75,21 +75,15 @@ class OptimizedChessAI {
                     val position = ChessPosition(row, col)
                     
                     // Get legal moves with built-in check validation
-                    val validMoves = ChessLogic.getValidMoves(
+                    val possibleMoves = ChessLogic.getPossibleMoves(
                         position = position,
                         board = board,
                         gameState = gameState,
                         validateChecks = true  // Enable check validation during move generation
                     )
                     
-                    // Convert positions to ChessMove objects
-                    validMoves.forEach { targetPos ->
-                        val move = ChessMove(
-                            from = position,
-                            to = targetPos,
-                            piece = piece,
-                            capturedPiece = board[targetPos.row][targetPos.col]
-                        )
+                    // Iterate through ChessMove objects directly
+                    possibleMoves.forEach { move ->
                         
                         // If king is in check, check if this move gets us out of check
                         if (kingInCheck) {

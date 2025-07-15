@@ -24,7 +24,11 @@ class ChessAI {
         delay(Random.nextLong(300, 1000))
 
         // Create a temporary game state for move validation
-        val tempState = ChessGameState(board, color)
+        // Using the board and current player color to create the state
+        val tempState = ChessGameState(
+            board = board,
+            currentPlayer = color
+        )
         val allPossibleMoves = mutableListOf<ChessMove>()
 
         // Find all pieces of the AI's color and collect their valid moves
@@ -33,8 +37,8 @@ class ChessAI {
                 val piece = board[row][col]
                 if (piece != null && piece.color == color) {
                     val position = ChessPosition(row, col)
-                    val validMoves = tempState.getValidMoves(position, board, true)
-                    
+                    val validMoves = tempState.getValidMovesOptimized(position, board)
+
                     // Create move objects for each valid move
                     validMoves.forEach { targetPos ->
                         val capturedPiece = board[targetPos.row][targetPos.col]
