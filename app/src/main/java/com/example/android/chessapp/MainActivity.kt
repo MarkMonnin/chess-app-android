@@ -3,6 +3,8 @@ package com.example.android.chessapp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.example.android.chessapp.ui.theme.Dimensions
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,8 +19,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             ChessAppTheme {
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .windowInsetsPadding(WindowInsets.safeDrawing),
+                    color = MaterialTheme.colorScheme.background,
+                    shape = RoundedCornerShape(Dimensions.radiusLarge),
+                    tonalElevation = Dimensions.medium
                 ) {
                     ChessApp()
                 }
@@ -31,7 +37,7 @@ class MainActivity : ComponentActivity() {
 fun ChessApp() {
     var showBoard by remember { mutableStateOf(false) }
     var gameMode by remember { mutableStateOf(GameMode.HUMAN_VS_AI) }
-    var gameResetKey by remember { mutableStateOf(0) }
+    var gameResetKey by remember { mutableIntStateOf(0) }
 
     if (showBoard) {
         Column(
@@ -41,7 +47,7 @@ fun ChessApp() {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(Dimensions.medium),
                 horizontalArrangement = Arrangement.Start
             ) {
                 Button(
@@ -49,7 +55,7 @@ fun ChessApp() {
                 ) {
                     Text("← Back")
                 }
-                Spacer(modifier = Modifier.width(8.dp)) // Add some space between buttons
+                Spacer(modifier = Modifier.width(Dimensions.small)) // Add some space between buttons
                 Button(
                     onClick = { gameResetKey++ }
                 ) {
@@ -77,7 +83,7 @@ fun ChessApp() {
                 Text(
                     text = "Chess App",
                     style = MaterialTheme.typography.headlineLarge,
-                    modifier = Modifier.padding(bottom = 32.dp)
+                    modifier = Modifier.padding(bottom = Dimensions.extraLarge)
                 )
 
                 // Game mode buttons
@@ -86,7 +92,7 @@ fun ChessApp() {
                         gameMode = GameMode.HUMAN_VS_HUMAN
                         showBoard = true
                     },
-                    modifier = Modifier.padding(8.dp)
+                    modifier = Modifier.padding(Dimensions.small)
                 ) {
                     Text("Play vs Human")
                 }
@@ -96,7 +102,7 @@ fun ChessApp() {
                         gameMode = GameMode.HUMAN_VS_AI
                         showBoard = true
                     },
-                    modifier = Modifier.padding(8.dp)
+                    modifier = Modifier.padding(Dimensions.small)
                 ) {
                     Text("Play vs AI")
                 }

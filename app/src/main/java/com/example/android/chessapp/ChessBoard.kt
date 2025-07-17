@@ -1,4 +1,5 @@
 package com.example.android.chessapp
+import com.example.android.chessapp.ui.theme.Dimensions
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -8,6 +9,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,9 +20,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.coroutines.*
@@ -103,6 +111,7 @@ fun ChessBoard(
 
         val coroutineScope = rememberCoroutineScope()
         val chessAI = remember { OptimizedChessAI() }
+        val haptic = LocalHapticFeedback.current
 
         // Promotion Dialog
         if (showPromotionDialog && promotionMove != null) {
@@ -114,11 +123,15 @@ fun ChessBoard(
                         val pieceColor = promotionMove!!.piece.color
                         val promotionOptions = listOf(PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT)
                         promotionOptions.forEach { pieceType ->
-                            Button(
+                            OutlinedButton(
                                 onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     promotionMove = promotionMove!!.withPromotion(pieceType)
                                     showPromotionDialog = false
                                 },
+                                shape = RoundedCornerShape(Dimensions.radiusMedium),
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = Dimensions.small),
+                                colors = ButtonDefaults.outlinedButtonColors(),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
@@ -149,18 +162,30 @@ fun ChessBoard(
                 text = {
                     Column {
                         Text("Copy this PGN notation:")
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Dimensions.small))
                         Text(
                             text = pgnText,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color.LightGray.copy(alpha = 0.3f))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                .padding(Dimensions.small)
                                 .padding(8.dp)
                         )
                     }
                 },
                 confirmButton = {
-                    Button(onClick = { showPgnDialog = false }) {
+                    Button(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            showPgnDialog = false
+                        },
+                        shape = RoundedCornerShape(Dimensions.radiusMedium),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = Dimensions.small),
+                        colors = ButtonDefaults.buttonColors(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
                         Text("Close")
                     }
                 }
@@ -313,55 +338,14 @@ fun ChessBoard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = Dimensions.medium, vertical = Dimensions.small),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceAround,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                ) {
-                    // Undo button
-                    IconButton(
-                        onClick = {
-                            gameState.undoMove()?.let { newState ->
-                                gameState = newState
-                                selectedPosition = null
-                                validMoves = emptyList()
-                            }
-                        },
-                        enabled = gameState.canUndo() && !isAITurn
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Undo last move"
-                        )
-                    }
-
-                    Text(
-                        text = if (gameState.currentPlayer == PieceColor.WHITE) "WHITE's turn" else "BLACK's turn",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-
-                    // Redo button
-                    IconButton(
-                        onClick = {
-                            gameState.redoMove()?.let { newState ->
-                                gameState = newState
-                                selectedPosition = null
-                                validMoves = emptyList()
-                            }
-                        },
-                        enabled = gameState.canRedo() && !isAITurn
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Redo last move"
-                        )
+                // Selected piece info
+                if (selectedPosition != null) {
+                    val piece = gameState.board[selectedPosition!!.row][selectedPosition!!.col]
+                    if (piece != null) {
+                        // TODO
                     }
                 }
 
@@ -370,7 +354,7 @@ fun ChessBoard(
                         text = "Please return the board to its most recent state before making a move",
                         color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(top = 8.dp)
+                        modifier = Modifier.padding(top = Dimensions.small)
                     )
                 }
 
@@ -379,7 +363,7 @@ fun ChessBoard(
                         text = "CHECK!",
                         color = Color.Red,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(top = 16.dp)
+                        modifier = Modifier.padding(top = Dimensions.extraLarge)
                     )
                 }
             }
@@ -399,7 +383,7 @@ fun ChessBoard(
                         modifier = Modifier
                             .width(squareSize * 8)
                             .height(squareSize * 8)
-                            .padding(4.dp)
+                            .padding(Dimensions.small)
                     ) {
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(8),
@@ -433,25 +417,32 @@ fun ChessBoard(
                     ) {
                         // Buttons
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(Dimensions.small),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             // Toggle Move List Button
-                            Button(
-                                onClick = { showMoveList = !showMoveList },
+                            OutlinedButton(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    showMoveList = !showMoveList
+                                },
+                                shape = RoundedCornerShape(Dimensions.radiusMedium),
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = Dimensions.small),
+                                colors = ButtonDefaults.outlinedButtonColors(),
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Share,
                                     contentDescription = if (showMoveList) "Hide Move List" else "Show Move List"
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(Dimensions.small))
                                 Text(text = if (showMoveList) "Hide Moves" else "Show Moves")
                             }
 
                             // Export PGN Button
-                            Button(
+                            OutlinedButton(
                                 onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     pgnText = PgnUtils.exportGameToPgn(
                                         gameState = gameState,
                                         whitePlayer = "Player 1",
@@ -468,7 +459,7 @@ fun ChessBoard(
                                     imageVector = Icons.Default.Share,
                                     contentDescription = "Export PGN"
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(Dimensions.small))
                                 Text(text = "Export PGN")
                             }
                         }
@@ -485,14 +476,14 @@ fun ChessBoard(
                         Text(
                             text = "Castling: $castlingRights",
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                            modifier = Modifier.padding(top = Dimensions.small, bottom = Dimensions.small)
                         )
 
                         // Move count and game info
                         Text(
                             text = "Move ${(gameState.fullMoveNumber)}",
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                            modifier = Modifier.padding(top = Dimensions.small, bottom = 2.dp)
                         )
 
                         // Conditional content
@@ -500,7 +491,7 @@ fun ChessBoard(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .padding(horizontal = Dimensions.medium, vertical = Dimensions.small)
                         ) {
                             if (showMoveList) {
                                 MoveList(
@@ -548,7 +539,7 @@ fun ChessBoard(
                         modifier = Modifier
                             .width(squareSize * 8)
                             .height(squareSize * 8)
-                            .padding(4.dp)
+                            .padding(Dimensions.small)
                     ) {
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(8),
@@ -588,14 +579,14 @@ fun ChessBoard(
                     Text(
                         text = "Castling: $castlingRights",
                         style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                        modifier = Modifier.padding(top = Dimensions.small, bottom = Dimensions.small)
                     )
 
                     // Move count and game info
                     Text(
                         text = "Move ${(gameState.fullMoveNumber)}",
                         style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                        modifier = Modifier.padding(top = Dimensions.small, bottom = 2.dp)
                     )
                 }
             }
@@ -614,41 +605,50 @@ fun ChessSquare(
     onClick: () -> Unit,
     squareSize: Dp
 ) {
+    val haptic = LocalHapticFeedback.current
+    val shape = RoundedCornerShape(Dimensions.radiusSmall)
+    val targetColor = when {
+        isSelected -> MaterialTheme.colorScheme.secondaryContainer
+        isValidMove -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+        isLight -> MaterialTheme.colorScheme.surface
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val animatedColor by animateColorAsState(targetColor, label = "squareBgAnim")
+
     Box(
         modifier = Modifier
-            .size(squareSize)
-            .background(
-                color = when {
-                    isSelected -> Color(0xFFBBCC44)
-                    isValidMove -> Color(0xFF88AA33).copy(alpha = 0.5f)
-                    isLight -> Color(0xFFF0F0D0)
-                    else -> Color(0xFFB58863)
-                }
-            )
+            .size(maxOf(squareSize, Dimensions.minTouchTarget))
+            .clip(shape)
+            .background(animatedColor)
             .border(
                 width = if (isSelected) 2.dp else 0.dp,
-                color = Color(0xFF779900)
+                color = MaterialTheme.colorScheme.primary
             )
-            .clickable(onClick = onClick),
+            .clickable(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onClick()
+                }
+            ),
         contentAlignment = Alignment.Center
     ) {
-        piece?.let {
-            val symbol = it.getPieceSymbol()
-            Log.d("ChessSquare", "Piece: ${it.color} ${it.type}, Symbol: $symbol, Position: ${position.row},${position.col}")
-            Text(
-                text = symbol,
-                fontSize = 36.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxSize()
-            )
+        AnimatedContent(targetState = piece, label = "pieceAnim") { animPiece ->
+            animPiece?.let {
+                val symbol = it.getPieceSymbol()
+                Text(
+                    text = symbol,
+                    fontSize = 36.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
-
         // Show dot for valid move on empty square
         if (isValidMove && piece == null) {
             Box(
                 modifier = Modifier
-                    .size(12.dp)
-                    .background(Color.Green.copy(alpha = 0.7f), shape = CircleShape)
+                    .size(Dimensions.small)
+                    .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f), shape = CircleShape)
             )
         }
     }

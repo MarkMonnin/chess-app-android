@@ -1,12 +1,19 @@
 package com.example.android.chessapp
 
 import androidx.compose.foundation.layout.*
+import com.example.android.chessapp.ui.theme.Dimensions
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,18 +38,18 @@ fun MoveList(
 
     Card(
         modifier = modifier.fillMaxSize(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = Dimensions.small)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(8.dp)
+                .padding(Dimensions.small)
         ) {
             Text(
                 text = "Move History",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = Dimensions.small)
             )
             
             if (movePairs.isEmpty()) {
@@ -55,7 +62,7 @@ fun MoveList(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(Dimensions.small)
                 ) {
                     itemsIndexed(movePairs) { _, pair ->
                         MoveRow(
@@ -84,12 +91,13 @@ private data class MovePair(
  * Composable that displays a single row in the move list (one white and one black move)
  */
 @Composable
-private fun MoveRow(
+fun MoveRow(
     moveNumber: Int,
     whiteMove: ChessMoveRecord?,
     blackMove: ChessMoveRecord?,
     onMoveSelected: ((ChessMoveRecord) -> Unit)?
 ) {
+    val haptic = LocalHapticFeedback.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
@@ -97,7 +105,7 @@ private fun MoveRow(
         // Move number
         Text(
             text = "$moveNumber.",
-            modifier = Modifier.padding(end = 8.dp),
+            modifier = Modifier.padding(end = Dimensions.small),
             fontSize = 14.sp
         )
         
@@ -107,7 +115,7 @@ private fun MoveRow(
             onClick = { onMoveSelected?.invoke(whiteMove!!) },
             modifier = Modifier
                 .weight(1f)
-                .padding(end = 4.dp)
+                .padding(end = Dimensions.small)
         )
         
         // Black's move
@@ -123,7 +131,7 @@ private fun MoveRow(
  * Composable that displays a single move as a button
  */
 @Composable
-private fun MoveButton(
+fun MoveButton(
     move: ChessMoveRecord?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -131,7 +139,7 @@ private fun MoveButton(
     if (move == null) {
         Box(
             modifier = modifier
-                .height(32.dp)
+                .height(Dimensions.extraLarge)
                 .fillMaxWidth()
         )
     } else {
@@ -155,18 +163,30 @@ private fun MoveButton(
             "$pieceSymbol$fromFile$fromRank$captureSymbol$toFile$toRank"
         }
         
+        val haptic = LocalHapticFeedback.current
         OutlinedButton(
-            onClick = onClick,
-            modifier = modifier.height(32.dp),
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            },
+            modifier = modifier
+                .height(Dimensions.extraLarge)
+                
+                .clip(RoundedCornerShape(Dimensions.radiusMedium)),
+            shape = RoundedCornerShape(Dimensions.radiusMedium),
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = MaterialTheme.colorScheme.onSurface
-            )
+            ),
+            interactionSource = remember { MutableInteractionSource() },
+            // Ripple is default for Material 3 buttons
         ) {
-            Text(
-                text = moveText,
-                fontSize = 12.sp,
-                maxLines = 1
-            )
+            AnimatedContent(targetState = moveText) { text: String ->
+                Text(
+                    text = text,
+                    fontSize = 12.sp,
+                    maxLines = 1
+                )
+            }
         }
     }
 }
