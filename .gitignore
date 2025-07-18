@@ -19,6 +19,7 @@ essential_dev_files.txt
 SUMMARY.md
 TODO.md
 NOTES.md
+.windsurfrules
 
 # Gradle files
 .gradle/

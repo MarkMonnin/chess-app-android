@@ -109,4 +109,23 @@ class OptimizedChessAI {
             legalMoves
         }
     }
+
+    companion object {
+        fun findBestMove(gameState: ChessGameState): ChessMove {
+            val moves = mutableListOf<ChessMove>()
+            for (row in 0..7) {
+                for (col in 0..7) {
+                    val piece = gameState.board[row][col]
+                    if (piece != null && piece.color == gameState.currentPlayer) {
+                        val from = ChessPosition(row, col)
+                        val validMoves = ChessLogic.getValidMoves(from, gameState.board, gameState)
+                        validMoves.forEach { to ->
+                            moves.add(ChessMove(from, to, piece))
+                        }
+                    }
+                }
+            }
+            return moves.random()
+        }
+    }
 }
