@@ -57,18 +57,20 @@ fun ChessApp() {
                 }
                 Spacer(modifier = Modifier.width(Dimensions.small)) // Add some space between buttons
                 Button(
-                    onClick = { gameResetKey++ }
+                    onClick = { gameResetKey++ },
                 ) {
                     Text("New Game")
                 }
             }
 
             // Chess board with selected game mode
-            ChessBoard(
-                modifier = Modifier.weight(1f),
-                gameMode = gameMode,
-                resetKey = gameResetKey
-            )
+            key(gameResetKey) {
+                ChessBoard(
+                    modifier = Modifier.weight(1f),
+                    gameMode = gameMode,
+                    resetKey = gameResetKey
+                )
+            }
         }
     } else {
         // Home screen with game mode selection

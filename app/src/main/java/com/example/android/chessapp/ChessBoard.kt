@@ -29,8 +29,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
@@ -65,7 +64,7 @@ fun ChessBoard(
     val squareSize = (availableHeightForBoard / 8).coerceAtMost(screenWidth / 8)
 
     // --- Game State ---
-    val initialBoard = remember {
+    val initialBoard = remember(resetKey) {
         Array(8) { row ->
             Array(8) { col ->
                 when (row) {
@@ -92,13 +91,17 @@ fun ChessBoard(
             }
         }
     }
-    var gameState by remember { mutableStateOf(ChessGameState(board = initialBoard)) }
-    var selectedPosition by remember { mutableStateOf<ChessPosition?>(null) }
-    var validMoves by remember { mutableStateOf<List<ChessPosition>>(emptyList()) }
-    var lastMove by remember { mutableStateOf<Pair<ChessPosition, ChessPosition>?>(null) }
+    // Game state with built-in undo/redo
+    val initialState by remember(resetKey) { mutableStateOf(ChessGameState(board = initialBoard)) }
+    var gameState by remember(resetKey) { mutableStateOf(initialState) }
+    var selectedPosition by remember(resetKey) { mutableStateOf<ChessPosition?>(null) }
+    var validMoves by remember(resetKey) { mutableStateOf(emptyList<ChessPosition>()) }
+    var lastMove by remember(resetKey) { mutableStateOf<Pair<ChessPosition, ChessPosition>?>(null) }
 
     // --- User Interaction ---
-    val onSquareSelected: (ChessPosition) -> Unit = { pos ->
+    val onSquareSelected: (ChessPosition) -> Unit = onSquare@{ pos ->
+        // Disable new moves while browsing history
+        if (gameState.moveHistory.isNotEmpty() && gameState.futureMoves.isNotEmpty()) return@onSquare
         if (selectedPosition == null) {
             // Select a piece
             val piece = gameState.board[pos.row][pos.col]
@@ -111,8 +114,8 @@ fun ChessBoard(
             if (pos in validMoves) {
                 val move = ChessMove(selectedPosition!!, pos, gameState.board[selectedPosition!!.row][selectedPosition!!.col]!!)
                 val newState = gameState.applyMove(move)
-                lastMove = Pair(selectedPosition!!, pos)
                 gameState = newState
+                lastMove = Pair(selectedPosition!!, pos)
             }
             selectedPosition = null
             validMoves = emptyList()
@@ -121,48 +124,65 @@ fun ChessBoard(
 
     Column(
         modifier = modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        
+        Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        IconButton(onClick = {
+            gameState.undoMove()?.let { prevState ->
+                gameState = prevState
+                val last = prevState.moveHistory.lastOrNull()?.move
+                if (last != null) lastMove = last.from to last.to else lastMove = null
+            }
+        }) {
+            Icon(Icons.Filled.ArrowBack, contentDescription = "Undo")
+        }
+        Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = if (gameState.currentPlayer == PieceColor.WHITE) "White's turn" else "Black's turn",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(vertical = 8.dp)
+            style = MaterialTheme.typography.titleMedium
         )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            IconButton(onClick = { gameState.undoMove()?.let { gameState = it } }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Undo")
+        Spacer(modifier = Modifier.width(8.dp))
+
+        IconButton(onClick = {
+            gameState.redoMove()?.let { nextState ->
+                gameState = nextState
+                gameState.moveHistory.lastOrNull()?.move?.let { lastMove = it.from to it.to }
             }
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .aspectRatio(1f)
-            ) {
-                ChessBoardCanvas(
-                    board = gameState.board,
-                    selected = selectedPosition,
-                    validMoves = validMoves,
-                    lastMove = lastMove,
-                    onSquareSelected = onSquareSelected,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-            IconButton(onClick = { gameState.redoMove()?.let { gameState = it } }) {
-                Icon(Icons.Filled.ArrowForward, contentDescription = "Redo")
-            }
+        }) {
+            Icon(Icons.Filled.ArrowForward, contentDescription = "Redo")
         }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+    ) {
+        ChessBoardCanvas(
+            board = gameState.board,
+            selected = selectedPosition,
+            validMoves = validMoves,
+            lastMove = lastMove,
+            onSquareSelected = onSquareSelected,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
     }
     // Auto-trigger AI move after human
     LaunchedEffect(lastMove) {
-        if (gameMode == GameMode.HUMAN_VS_AI && lastMove != null && gameState.currentPlayer != PieceColor.WHITE) {
+        if (gameMode == GameMode.HUMAN_VS_AI && lastMove != null && gameState.futureMoves.isEmpty() && gameState.currentPlayer != PieceColor.WHITE) {
             val aiMove = OptimizedChessAI.findBestMove(gameState)
             val newState = gameState.applyMove(aiMove)
-            lastMove = aiMove.from to aiMove.to
             gameState = newState
+            lastMove = aiMove.from to aiMove.to
         }
     }
 }
