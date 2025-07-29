@@ -141,6 +141,8 @@ fun ChessBoard(
                 val last = prevState.moveHistory.lastOrNull()?.move
                 if (last != null) lastMove = last.from to last.to else lastMove = null
             }
+            selectedPosition = null
+            validMoves = emptyList()
         }) {
             Icon(Icons.Filled.ArrowBack, contentDescription = "Undo")
         }
@@ -156,6 +158,8 @@ fun ChessBoard(
                 gameState = nextState
                 gameState.moveHistory.lastOrNull()?.move?.let { lastMove = it.from to it.to }
             }
+            selectedPosition = null
+            validMoves = emptyList()
         }) {
             Icon(Icons.Filled.ArrowForward, contentDescription = "Redo")
         }
