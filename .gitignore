@@ -19,6 +19,7 @@ essential_dev_files.txt
 SUMMARY.md
 TODO.md
 NOTES.md
+.windsurfrules
 
 # Gradle files
 .gradle/
@@ -97,3 +98,4 @@ lint/tmp/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+/PLANNING.md

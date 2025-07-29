@@ -28,14 +28,18 @@ data class ChessGameState(
     val halfMoveClock: Int = 0, // Number of half-moves since last capture or pawn move
     val fullMoveNumber: Int = 1, // Starts at 1, increments after black's move
     val lastMove: ChessMove? = moveHistory.lastOrNull()?.move,
-    val isCheck: Boolean = false,
-    val isCheckmate: Boolean = false,
-    val isStalemate: Boolean = false,
     val futureMoves: List<ChessMoveRecord> = emptyList(),
     // Keep these as parameters but use lazy initialization
     private val _whiteKingPosition: ChessPosition? = null,
     private val _blackKingPosition: ChessPosition? = null
 ) {
+    /** Whether the current player's king is in check */
+    val isCheck: Boolean get() = isInCheck(currentPlayer)
+    /** Whether the game is in checkmate for the current player */
+    val isCheckmate: Boolean get() = isCheck && !hasLegalMoves(currentPlayer)
+    /** Whether the game is in stalemate for the current player */
+    val isStalemate: Boolean get() = !isCheck && !hasLegalMoves(currentPlayer)
+
     val isDrawByFiftyMoveRule: Boolean get() = halfMoveClock >= 100
     val isDrawByInsufficientMaterial: Boolean get() = isInsufficientMaterial()
     val whiteKingPosition: ChessPosition get() = _whiteKingPosition ?: findKingPosition(PieceColor.WHITE)
@@ -170,8 +174,7 @@ data class ChessGameState(
      * @param recordMove Whether to record this move in the history (default: true)
      * @return A new ChessGameState with the move applied
      */
-    fun applyMove(move: ChessMove, recordMove: Boolean = true): ChessGameState {
-        // Create a deep copy of the board
+    fun applyMove(move: ChessMove, recordMove: Boolean = true, calculateEndState: Boolean = true): ChessGameState {
         val newBoard = board.map { it.clone() }.toTypedArray()
         val piece = newBoard[move.from.row][move.from.col]!!
 
@@ -213,129 +216,74 @@ data class ChessGameState(
             newBoard[move.to.row][move.to.col] = piece
         }
 
-        // Update king positions if needed
-        val updatedWhiteKingPos = if (piece.type == PieceType.KING && piece.color == PieceColor.WHITE) {
-            move.to
-        } else {
-            whiteKingPosition
-        }
+        val updatedWhiteKingPos = if (piece.type == PieceType.KING && piece.color == PieceColor.WHITE) move.to else whiteKingPosition
+        val updatedBlackKingPos = if (piece.type == PieceType.KING && piece.color == PieceColor.BLACK) move.to else blackKingPosition
 
-        val updatedBlackKingPos = if (piece.type == PieceType.KING && piece.color == PieceColor.BLACK) {
-            move.to
-        } else {
-            blackKingPosition
-        }
+        var newWhiteCanCastleKingside = whiteCanCastleKingside
+        var newWhiteCanCastleQueenside = whiteCanCastleQueenside
+        var newBlackCanCastleKingside = blackCanCastleKingside
+        var newBlackCanCastleQueenside = blackCanCastleQueenside
 
-        // Update castling rights based on moved pieces
-        val newWhiteCanCastleKingside = when {
-            piece.type == PieceType.KING && piece.color == PieceColor.WHITE -> false
-            piece.type == PieceType.ROOK && move.from == ChessPosition(7, 7) -> false
-            else -> whiteCanCastleKingside
-        }
+        // A move can revoke castling rights if a king or a rook moves for the first time,
+        // or if a rook is captured.
 
-        val newWhiteCanCastleQueenside = when {
-            piece.type == PieceType.KING && piece.color == PieceColor.WHITE -> false
-            piece.type == PieceType.ROOK && move.from == ChessPosition(7, 0) -> false
-            else -> whiteCanCastleQueenside
-        }
-
-        val newBlackCanCastleKingside = when {
-            piece.type == PieceType.KING && piece.color == PieceColor.BLACK -> false
-            piece.type == PieceType.ROOK && move.from == ChessPosition(0, 7) -> false
-            else -> blackCanCastleKingside
-        }
-
-        val newBlackCanCastleQueenside = when {
-            piece.type == PieceType.KING && piece.color == PieceColor.BLACK -> false
-            piece.type == PieceType.ROOK && move.from == ChessPosition(0, 0) -> false
-            else -> blackCanCastleQueenside
-        }
-
-        // Handle rook capture for castling rights
-        var finalWhiteCanCastleKingside = newWhiteCanCastleKingside
-        var finalWhiteCanCastleQueenside = newWhiteCanCastleQueenside
-        var finalBlackCanCastleKingside = newBlackCanCastleKingside
-        var finalBlackCanCastleQueenside = newBlackCanCastleQueenside
-
-        if (capturedPiece?.type == PieceType.ROOK) {
-            when (move.to) {
-                ChessPosition(0, 0) -> finalBlackCanCastleQueenside = false
-                ChessPosition(0, 7) -> finalBlackCanCastleKingside = false
-                ChessPosition(7, 0) -> finalWhiteCanCastleQueenside = false
-                ChessPosition(7, 7) -> finalWhiteCanCastleKingside = false
-                else -> { /* No change */ }
+        // 1. King move
+        if (piece.type == PieceType.KING) {
+            if (piece.color == PieceColor.WHITE) {
+                newWhiteCanCastleKingside = false
+                newWhiteCanCastleQueenside = false
+            } else {
+                newBlackCanCastleKingside = false
+                newBlackCanCastleQueenside = false
             }
         }
 
-        // Update en passant target
-        val newEnPassantTarget = if (piece.type == PieceType.PAWN &&
-            abs(move.from.row - move.to.row) == 2) {
-            // Pawn moved two squares, set en passant target
-            val targetRow = (move.from.row + move.to.row) / 2
-            ChessPosition(targetRow, move.from.col)
+        // 2. Rook move/capture
+        if (move.from == ChessPosition(7, 7) || move.to == ChessPosition(7, 7)) newWhiteCanCastleKingside = false
+        if (move.from == ChessPosition(7, 0) || move.to == ChessPosition(7, 0)) newWhiteCanCastleQueenside = false
+        if (move.from == ChessPosition(0, 7) || move.to == ChessPosition(0, 7)) newBlackCanCastleKingside = false
+        if (move.from == ChessPosition(0, 0) || move.to == ChessPosition(0, 0)) newBlackCanCastleQueenside = false
+
+        val newEnPassantTarget = if (piece.type == PieceType.PAWN && abs(move.from.row - move.to.row) == 2) {
+            ChessPosition((move.from.row + move.to.row) / 2, move.from.col)
         } else {
             null
         }
 
-        // Update half-move clock
-        val newHalfMoveClock = if (piece.type == PieceType.PAWN || capturedPiece != null) {
-            0 // Reset on pawn move or capture
-        } else {
-            halfMoveClock + 1
-        }
+        val newHalfMoveClock = if (piece.type == PieceType.PAWN || capturedPiece != null) 0 else halfMoveClock + 1
+        val newFullMoveNumber = if (currentPlayer == PieceColor.BLACK) fullMoveNumber + 1 else fullMoveNumber
 
-        // Update full move number
-        val newFullMoveNumber = if (currentPlayer == PieceColor.BLACK) {
-            fullMoveNumber + 1
-        } else {
-            fullMoveNumber
-        }
-
-        // Update captured pieces list
         val newCapturedPieces = if (capturedPiece != null) {
             capturedPieces + capturedPiece
         } else if (piece.type == PieceType.PAWN && move.to == enPassantTarget) {
-            // En passant capture
-            val capturedPawn = ChessPiece(PieceType.PAWN, currentPlayer.opposite())
-            capturedPieces + capturedPawn
+            capturedPieces + ChessPiece(PieceType.PAWN, currentPlayer.opposite())
         } else {
             capturedPieces
         }
 
-        // Create a new state with the move applied
-        val newState = copy(
+        var newState = copy(
             board = newBoard,
             currentPlayer = currentPlayer.opposite(),
-            whiteCanCastleKingside = finalWhiteCanCastleKingside,
-            whiteCanCastleQueenside = finalWhiteCanCastleQueenside,
-            blackCanCastleKingside = finalBlackCanCastleKingside,
-            blackCanCastleQueenside = finalBlackCanCastleQueenside,
+            whiteCanCastleKingside = newWhiteCanCastleKingside,
+            whiteCanCastleQueenside = newWhiteCanCastleQueenside,
+            blackCanCastleKingside = newBlackCanCastleKingside,
+            blackCanCastleQueenside = newBlackCanCastleQueenside,
             enPassantTarget = newEnPassantTarget,
             halfMoveClock = newHalfMoveClock,
             fullMoveNumber = newFullMoveNumber,
             capturedPieces = newCapturedPieces,
             lastMove = move,
-            isCheck = false,
-            isCheckmate = false,
-            isStalemate = false,
-            // Clear future moves when making a new move (we're creating a new timeline)
             futureMoves = emptyList(),
             _whiteKingPosition = updatedWhiteKingPos,
             _blackKingPosition = updatedBlackKingPos
         )
 
-        // Check if the opponent is in check after the move
-        val opponentInCheck = newState.isInCheck(newState.currentPlayer)
+        if (calculateEndState) {
+            val opponentInCheck = newState.isInCheck(newState.currentPlayer)
 
-        // Check for checkmate or stalemate
-        val hasLegalMoves = newState.hasLegalMoves(newState.currentPlayer)
-
-        // Create the final state with check/checkmate/stalemate status
-        val finalState = newState.copy(
-            isCheck = opponentInCheck,
-            isCheckmate = opponentInCheck && !hasLegalMoves,
-            isStalemate = !opponentInCheck && !hasLegalMoves
-        )
+            // Check for checkmate or stalemate
+            val hasLegalMoves = newState.hasLegalMoves(newState.currentPlayer)
+        }
 
         // If we're recording this move, add it to the history
         return if (recordMove) {
@@ -344,125 +292,19 @@ data class ChessGameState(
                 capturedPiece = capturedPiece,
                 previousState = this
             )
-            finalState.copy(
-                moveHistory = moveHistory + moveRecord
-            )
+            newState.copy(moveHistory = moveHistory + moveRecord)
         } else {
-            finalState
+            newState
         }
     }
 
-    /**
-     * Checks if the specified color's king is in check
-     * @param color The color to check for check
-     * @return true if the king is in check, false otherwise
-     */
-    private fun isInCheck(color: PieceColor): Boolean {
+    fun isInCheck(color: PieceColor): Boolean {
         val kingPosition = if (color == PieceColor.WHITE) whiteKingPosition else blackKingPosition
-        val opponentColor = color.opposite()
-
-        // Check all opponent's pieces to see if any can capture the king
-        for (row in 0..7) {
-            for (col in 0..7) {
-                val piece = board[row][col]
-                if (piece != null && piece.color == opponentColor) {
-                    // Get pseudo-legal moves (without check validation to avoid infinite recursion)
-                    val moves = ChessLogic.getValidMoves(ChessPosition(row, col), board, this)
-                    if (moves.any { it == kingPosition }) {
-                        return true
-                    }
-                }
-            }
-        }
-        return false
-    }
-
-    /**
-     * Gets all valid moves for a piece at the given position using the optimized validator
-     * @param position The position of the piece
-     * @param board The current board state
-     * @param checkForCheck Whether to validate that moves don't leave the king in check
-     * @return List of valid target positions
-     */
-    fun getValidMovesOptimized(
-        position: ChessPosition,
-        board: Array<Array<ChessPiece?>>,
-        checkForCheck: Boolean = true
-    ): List<ChessPosition> {
-        val piece = board[position.row][position.col] ?: return emptyList()
-
-        // Get all pseudo-legal moves (basic movement rules)
-        val pseudoLegalMoves = ChessLogic.getValidMoves(position, board, this)
-
-        if (!checkForCheck) {
-            return pseudoLegalMoves
-        }
-
-        // Filter out moves that would leave the king in check using incremental validation
         val validator = IncrementalMoveValidator()
-        val legalMoves = mutableListOf<ChessPosition>()
-
-        pseudoLegalMoves.forEach { targetPos ->
-            val move = ChessMove(
-                from = position,
-                to = targetPos,
-                piece = piece,
-                capturedPiece = board[targetPos.row][targetPos.col]
-            )
-
-            if (validator.isMoveLegal(move, board, this)) {
-                legalMoves.add(targetPos)
-            }
-        }
-
-        return legalMoves
+        return validator.isKingInCheck(kingPosition, color, board)
     }
 
-    /**
-     * Gets all valid moves for a piece at the given position
-     * @param position The position of the piece
-     * @param board The current board state
-     * @param checkForCheck Whether to validate that moves don't leave the king in check
-     * @return List of valid target positions
-     * @deprecated Use getValidMovesOptimized for better performance
-     */
-    @Deprecated(
-        message = "Use getValidMovesOptimized for better performance",
-        replaceWith = ReplaceWith("getValidMovesOptimized(position, board, checkForCheck)")
-    )
-    fun getValidMoves(position: ChessPosition, board: Array<Array<ChessPiece?>>, checkForCheck: Boolean = true): List<ChessPosition> {
-        // Default to using the optimized version
-        return getValidMovesOptimized(position, board, checkForCheck)
-    }
 
-    /**
-     * Checks if the king of the given color is in check
-     * @param color The color of the king to check
-     * @return true if the king is in check, false otherwise
-     */
-    fun isKingInCheck(color: PieceColor): Boolean {
-        val kingPosition = if (color == PieceColor.WHITE) whiteKingPosition else blackKingPosition
-        val opponentColor = color.opposite()
-
-        // Check if any opponent piece can attack the king's position
-        for (row in 0..7) {
-            for (col in 0..7) {
-                val piece = board[row][col]
-                if (piece != null && piece.color == opponentColor) {
-                    val moves = ChessLogic.getValidMoves(
-                        position = ChessPosition(row, col),
-                        board = board,
-                        gameState = this,
-                        validateChecks = false // Don't validate checks here to avoid infinite recursion
-                    )
-                    if (moves.any { it == kingPosition }) {
-                        return true
-                    }
-                }
-            }
-        }
-        return false
-    }
 
     /**
      * Undoes the last move and returns the previous game state
@@ -549,7 +391,7 @@ data class ChessGameState(
                     val position = ChessPosition(row, col)
 
                     // Get all pseudo-legal moves (basic movement rules)
-                    val pseudoLegalMoves = ChessLogic.getValidMoves(position, board, this)
+                    val pseudoLegalMoves = ChessLogic.getValidMoves(position, board, this, validateChecks = false)
 
                     // Check if any of the pseudo-legal moves are actually legal
                     for (targetPos in pseudoLegalMoves) {
