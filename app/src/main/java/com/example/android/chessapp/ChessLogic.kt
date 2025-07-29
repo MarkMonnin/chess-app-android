@@ -29,43 +29,7 @@ object ChessLogic {
 
         when (piece.type) {
             PieceType.PAWN -> {
-                val direction = if (piece.color == PieceColor.WHITE) -1 else 1
-                val startRow = if (piece.color == PieceColor.WHITE) 6 else 1
-
-                // Move forward
-                val oneStep = ChessPosition(position.row + direction, position.col)
-                if (isValidPosition(oneStep) && board[oneStep.row][oneStep.col] == null) {
-                    moves.add(oneStep)
-
-                    // Two steps from starting position
-                    if (position.row == startRow) {
-                        val twoSteps = ChessPosition(position.row + 2 * direction, position.col)
-                        if (isValidPosition(twoSteps) && board[twoSteps.row][twoSteps.col] == null) {
-                            moves.add(twoSteps)
-                        }
-                    }
-                }
-
-                // Capture diagonally
-                listOf(-1, 1).forEach { colOffset ->
-                    val capturePos = ChessPosition(position.row + direction, position.col + colOffset)
-                    if (isValidPosition(capturePos)) {
-                        val targetPiece = board[capturePos.row][capturePos.col]
-                        if (targetPiece != null && targetPiece.color != piece.color) {
-                            moves.add(capturePos)
-                        }
-                    }
-                }
-
-                // En passant capture
-                if (gameState?.enPassantTarget != null) {
-                    val enPassantTarget = gameState.enPassantTarget!!
-                    if (enPassantTarget.row == position.row + direction) {
-                        if (enPassantTarget.col == position.col - 1 || enPassantTarget.col == position.col + 1) {
-                            moves.add(enPassantTarget)
-                        }
-                    }
-                }
+                moves.addAll(getPawnMoves(position, board, gameState))
             }
 
             PieceType.ROOK -> {
@@ -131,10 +95,11 @@ object ChessLogic {
         }
 
         if (validateChecks && gameState != null) {
+            val validator = IncrementalMoveValidator()
+            val boardCopy = board.map { it.clone() }.toTypedArray() // Use a copy for validation
             return moves.filter { move ->
-                val tempMove = ChessMove(position, move, piece)
-                val nextState = gameState.applyMove(tempMove, recordMove = false, calculateEndState = false)
-                !nextState.isInCheck(piece.color)
+                val chessMove = ChessMove(position, move, piece, board[move.row][move.col])
+                validator.isMoveLegal(chessMove, boardCopy, gameState)
             }
         }
 
@@ -295,6 +260,60 @@ object ChessLogic {
     /**
      * Gets all pseudo-legal bishop moves from the given position
      */
+    private fun getPawnMoves(position: ChessPosition, board: Array<Array<ChessPiece?>>, gameState: ChessGameState?): List<ChessPosition> {
+        val piece = board[position.row][position.col] ?: return emptyList()
+        val moves = mutableListOf<ChessPosition>()
+        val direction = if (piece.color == PieceColor.WHITE) -1 else 1
+        val startRow = if (piece.color == PieceColor.WHITE) 6 else 1
+
+        // Move forward
+        val oneStep = ChessPosition(position.row + direction, position.col)
+        if (isValidPosition(oneStep) && board[oneStep.row][oneStep.col] == null) {
+            moves.add(oneStep)
+
+            // Two steps from starting position
+            if (position.row == startRow) {
+                val twoSteps = ChessPosition(position.row + 2 * direction, position.col)
+                if (isValidPosition(twoSteps) && board[twoSteps.row][twoSteps.col] == null) {
+                    moves.add(twoSteps)
+                }
+            }
+        }
+
+        // Capture diagonally
+        listOf(-1, 1).forEach { colOffset ->
+            val capturePos = ChessPosition(position.row + direction, position.col + colOffset)
+            if (isValidPosition(capturePos)) {
+                val targetPiece = board[capturePos.row][capturePos.col]
+                if (targetPiece != null && targetPiece.color != piece.color) {
+                    moves.add(capturePos)
+                }
+            }
+        }
+
+        // En passant capture
+        gameState?.enPassantTarget?.let { enPassantTarget ->
+            if (enPassantTarget.row == position.row + direction && (enPassantTarget.col == position.col - 1 || enPassantTarget.col == position.col + 1)) {
+                moves.add(enPassantTarget)
+            }
+        }
+        return moves
+    }
+
+    private fun getPawnAttackMoves(position: ChessPosition, color: PieceColor): List<ChessPosition> {
+        val moves = mutableListOf<ChessPosition>()
+        val direction = if (color == PieceColor.WHITE) -1 else 1
+
+        // Diagonal attacks
+        listOf(-1, 1).forEach { colOffset ->
+            val attackPos = ChessPosition(position.row + direction, position.col + colOffset)
+            if (isValidPosition(attackPos)) {
+                moves.add(attackPos)
+            }
+        }
+        return moves
+    }
+
     private fun getBishopMoves(position: ChessPosition, board: Array<Array<ChessPiece?>>, color: PieceColor): List<ChessPosition> {
         val moves = mutableListOf<ChessPosition>()
         val directions = listOf(
@@ -335,24 +354,8 @@ object ChessLogic {
         gameState: ChessGameState,
         defenderColor: PieceColor
     ): Boolean {
-        val attackerColor = if (defenderColor == PieceColor.WHITE) PieceColor.BLACK else PieceColor.WHITE
-
-        // Check all opponent's pieces to see if they can attack the square
-        for (row in 0..7) {
-            for (col in 0..7) {
-                val piece = board[row][col]
-                if (piece != null && piece.color == attackerColor) {
-                    // Get all squares this piece attacks (don't validate checks to avoid infinite recursion)
-                    val moves = getValidMoves(ChessPosition(row, col), board, gameState, validateChecks = false, includeCastling = false)
-
-                    // If any move targets the position, it's under attack
-                    if (moves.any { it.row == position.row && it.col == position.col }) {
-                        return true
-                    }
-                }
-            }
-        }
-        return false
+        val validator = IncrementalMoveValidator()
+        return validator.isKingInCheck(position, defenderColor, board)
     }
 
     /**
@@ -378,9 +381,10 @@ object ChessLogic {
         }
 
         // 3. Check if the king is in check or would pass through or into check.
-        if (isSquareUnderAttack(kingPosition, board, gameState, color)) return false
-        if (isSquareUnderAttack(ChessPosition(row, 5), board, gameState, color)) return false
-        if (isSquareUnderAttack(ChessPosition(row, 6), board, gameState, color)) return false
+        val tempGameState = gameState.copy(currentPlayer = color.opposite())
+        if (isSquareUnderAttack(kingPosition, board, tempGameState, color)) return false
+        if (isSquareUnderAttack(ChessPosition(row, 5), board, tempGameState, color)) return false
+        if (isSquareUnderAttack(ChessPosition(row, 6), board, tempGameState, color)) return false
 
         // If all checks pass, castling is legal.
         return true
@@ -409,9 +413,10 @@ object ChessLogic {
         }
 
         // 3. Check if the king is in check or would pass through or into check.
-        if (isSquareUnderAttack(kingPosition, board, gameState, color)) return false
-        if (isSquareUnderAttack(ChessPosition(row, 3), board, gameState, color)) return false
-        if (isSquareUnderAttack(ChessPosition(row, 2), board, gameState, color)) return false
+        val tempGameState = gameState.copy(currentPlayer = color.opposite())
+        if (isSquareUnderAttack(kingPosition, board, tempGameState, color)) return false
+        if (isSquareUnderAttack(ChessPosition(row, 3), board, tempGameState, color)) return false
+        if (isSquareUnderAttack(ChessPosition(row, 2), board, tempGameState, color)) return false
 
         // If all checks pass, castling is legal.
         return true

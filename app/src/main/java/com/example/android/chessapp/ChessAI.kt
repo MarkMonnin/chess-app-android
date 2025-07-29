@@ -37,10 +37,10 @@ class ChessAI {
                 val piece = board[row][col]
                 if (piece != null && piece.color == color) {
                     val position = ChessPosition(row, col)
-                    val validMoves = tempState.getValidMovesOptimized(position, board)
+                    val moves = ChessLogic.getValidMoves(ChessPosition(row, col), board, tempState)
 
                     // Create move objects for each valid move
-                    validMoves.forEach { targetPos ->
+                    moves.forEach { targetPos ->
                         val capturedPiece = board[targetPos.row][targetPos.col]
                         allPossibleMoves.add(ChessMove(position, targetPos, piece, capturedPiece))
                     }
