@@ -44,6 +44,7 @@ class ChessLogicTest {
         board[7][5] = null // Clear bishop
         board[7][6] = null // Clear knight
         board[6][5] = null // Clear pawn at f2
+        board[6][5] = null // Clear pawn at f2
         val gameState = ChessGameState(board = board)
 
         // Act
@@ -108,6 +109,7 @@ class ChessLogicTest {
         val board = getInitialState().board
         board[7][5] = null
         board[7][6] = null
+        board[6][5] = null // Clear pawn at f2
         board[3][5] = ChessPiece(PieceType.ROOK, PieceColor.BLACK) // Attacking f1 square
         val gameState = ChessGameState(board = board)
 
@@ -152,24 +154,37 @@ class ChessLogicTest {
 
     @Test
     fun `test checkmate`() {
-        // A real checkmate setup (Scholar's Mate)
+        // Scholar's Mate: 1.e4 e5 2.Bc4 Nc6 3.Qh5 Nf6?? 4.Qxf7#
         val scholarBoard = getInitialState().board
         var scholarState = ChessGameState(board = scholarBoard)
-        
-        var piece = scholarState.board[6][4]!!
-        scholarState = scholarState.applyMove(ChessMove(ChessPosition(6, 4), ChessPosition(4, 4), piece)) // e4
-        piece = scholarState.board[1][4]!!
-        scholarState = scholarState.applyMove(ChessMove(ChessPosition(1, 4), ChessPosition(3, 4), piece)) // e5
-        piece = scholarState.board[7][5]!!
-        scholarState = scholarState.applyMove(ChessMove(ChessPosition(7, 5), ChessPosition(4, 2), piece)) // Bc4
-        piece = scholarState.board[0][6]!!
-        scholarState = scholarState.applyMove(ChessMove(ChessPosition(0, 6), ChessPosition(2, 5), piece)) // Nc6
-        piece = scholarState.board[7][3]!!
-        scholarState = scholarState.applyMove(ChessMove(ChessPosition(7, 3), ChessPosition(3, 7), piece)) // Qh5
-        piece = scholarState.board[1][5]!!
-        scholarState = scholarState.applyMove(ChessMove(ChessPosition(1, 5), ChessPosition(2, 5), piece)) // f6 (mistake)
-        piece = scholarState.board[3][7]!!
-        scholarState = scholarState.applyMove(ChessMove(ChessPosition(3, 7), ChessPosition(3, 4), piece, capturedPiece=scholarState.board[3][4])) // Qxe5#
+
+        // 1. e4 (white pawn from e2 to e4)
+        var piece = scholarState.board[6][4]!! // e2 pawn
+        scholarState = scholarState.applyMove(ChessMove(ChessPosition(6, 4), ChessPosition(4, 4), piece))
+
+        // 1... e5 (black pawn from e7 to e5)
+        piece = scholarState.board[1][4]!! // e7 pawn
+        scholarState = scholarState.applyMove(ChessMove(ChessPosition(1, 4), ChessPosition(3, 4), piece))
+
+        // 2. Bc4 (white bishop from f1 to c4)
+        piece = scholarState.board[7][5]!! // f1 bishop
+        scholarState = scholarState.applyMove(ChessMove(ChessPosition(7, 5), ChessPosition(4, 2), piece))
+
+        // 2... Nc6 (black knight from b8 to c6)
+        piece = scholarState.board[0][1]!! // b8 knight
+        scholarState = scholarState.applyMove(ChessMove(ChessPosition(0, 1), ChessPosition(2, 2), piece))
+
+        // 3. Qh5 (white queen from d1 to h5)
+        piece = scholarState.board[7][3]!! // d1 queen
+        scholarState = scholarState.applyMove(ChessMove(ChessPosition(7, 3), ChessPosition(3, 7), piece))
+
+        // 3... Nf6?? (black knight from g8 to f6 - the blunder)
+        piece = scholarState.board[0][6]!! // g8 knight
+        scholarState = scholarState.applyMove(ChessMove(ChessPosition(0, 6), ChessPosition(2, 5), piece))
+
+        // 4. Qxf7# (white queen captures f7 pawn for checkmate)
+        piece = scholarState.board[3][7]!! // h5 queen
+        scholarState = scholarState.applyMove(ChessMove(ChessPosition(3, 7), ChessPosition(1, 5), piece, capturedPiece = scholarState.board[1][5]))
 
         // Assert
         assertTrue("Game should be in checkmate", scholarState.isCheckmate)
