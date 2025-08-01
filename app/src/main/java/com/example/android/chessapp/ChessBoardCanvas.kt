@@ -54,7 +54,6 @@ fun ChessBoardCanvas(
         val strokeWidth = 6f
         val originOffset = strokeWidth / 2f
         val boardSize = squareSize * 8f
-        Log.d("ChessBoardCanvas", "Canvas size: ${'$'}{size.width}x${'$'}{size.height}, squareSize: ${'$'}squareSize, originOffset: ${'$'}originOffset")
 
         // Draw board squares
         for (row in 0..7) {

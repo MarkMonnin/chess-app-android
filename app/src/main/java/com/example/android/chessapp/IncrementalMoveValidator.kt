@@ -202,18 +202,14 @@ class IncrementalMoveValidator {
             Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0),  // Rook directions
             Pair(1, 1), Pair(1, -1), Pair(-1, 1), Pair(-1, -1)  // Bishop directions
         )
-        Log.d("AttackedBySlidingPiece", "Checking attacks on ${position} by $attackingColor")
 
         directions.forEach { (rowDir, colDir) ->
             var currentRow = position.row + rowDir
             var currentCol = position.col + colDir
-            Log.d("AttackedBySlidingPiece", "  Scanning direction: ($rowDir, $colDir)")
 
             while (currentRow in 0..7 && currentCol in 0..7) {
                 val piece = board[currentRow][currentCol]
-                Log.d("AttackedBySlidingPiece", "    Checking square ($currentRow, $currentCol)")
                 if (piece != null) {
-                    Log.d("AttackedBySlidingPiece", "      Found piece: ${piece.type} ${piece.color}")
                     if (piece.color == attackingColor) {
                         // Check if this piece can attack in this direction
                         val canAttack = when (piece.type) {
@@ -223,18 +219,15 @@ class IncrementalMoveValidator {
                             else -> false
                         }
                         if (canAttack) {
-                            Log.d("AttackedBySlidingPiece", "      ATTACK DETECTED from ($currentRow, $currentCol)!")
                             return true
                         }
                     }
-                    Log.d("AttackedBySlidingPiece", "      Piece blocks further movement in this direction.")
                     break // Piece blocks further movement
                 }
                 currentRow += rowDir
                 currentCol += colDir
             }
         }
-        Log.d("AttackedBySlidingPiece", "No sliding piece attack found on ${position}")
         return false
     }
     
